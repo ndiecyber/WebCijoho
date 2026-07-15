@@ -51,7 +51,10 @@ export default function About({ onOpenBooking }) {
                 </div>
                 <div className="about-content">
                     <h5 className="section-badge-green">TENTANG WATERBOOM CIJOHO INDAH</h5>
-                    <h2 className="section-title">LEPASKAN PENAT, NIKMATI HARIMU.</h2>
+                    <h2 className="section-title">
+                        LEPASKAN PENAT,<br />
+                        NIKMATI <span className="highlight-green">HARIMU.</span>
+                    </h2>
                     <p className="section-desc">
                         Kami menyediakan pengalaman luar biasa sekaligus petualangan yang aman untuk seluruh keluarga. Aktivitas aktif maupun santai tersedia, dengan staf profesional menjaga setiap wahana.
                     </p>

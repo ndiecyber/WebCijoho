@@ -80,7 +80,7 @@ export default function Footer() {
                         <i className="fa-solid fa-location-dot text-green"></i> <span>Jl. Cijoho, Tasikmalaya, Jawa Barat, Indonesia</span>
                     </div>
                     <div className="footer-copy">
-                        &copy; 2026 Waterboom Cijoho Indah. All rights reserved.
+                        &copy; 2024 Waterboom Cijoho Indah. All rights reserved.
                     </div>
                 </div>
             </div>

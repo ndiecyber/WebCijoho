@@ -336,17 +336,23 @@ img {
    HERO SECTION
    ========================================== */
 .hero-section {
-    padding: 80px 0 140px 0;
-    background: radial-gradient(circle at 85% 15%, rgba(146, 200, 62, 0.05) 0%, rgba(244, 248, 252, 1) 70%);
+    padding: 80px 0 160px 0;
+    background-color: #ffffff;
     position: relative;
     overflow: hidden;
+    min-height: 600px;
+    display: flex;
+    align-items: center;
 }
 
 .hero-container {
-    display: grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 48px;
-    align-items: center;
+    display: block;
+    position: relative;
+    z-index: 2;
+}
+
+.hero-content {
+    max-width: 52%;
 }
 
 .hero-badge {
@@ -358,11 +364,12 @@ img {
 }
 
 .hero-title {
-    font-size: 3.2rem;
+    font-size: 3.4rem;
     font-weight: 800;
     margin-bottom: 24px;
-    line-height: 1.15;
+    line-height: 1.1;
     letter-spacing: -0.5px;
+    color: var(--color-primary);
 }
 
 .highlight-green {
@@ -383,31 +390,45 @@ img {
 }
 
 .hero-media {
-    position: relative;
-}
-
-.hero-img-backdrop {
     position: absolute;
-    top: 20px;
-    left: 20px;
-    width: 100%;
+    top: 0;
+    right: 0;
+    width: 50%;
     height: 100%;
-    border-radius: var(--border-radius-lg);
-    background-color: var(--color-soft-blue);
     z-index: 1;
+    overflow: hidden;
 }
 
 .hero-img {
-    position: relative;
-    z-index: 2;
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow-medium);
-    transform: rotate(1deg);
-    transition: var(--transition-smooth);
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: left center;
 }
 
-.hero-img:hover {
-    transform: rotate(0deg) scale(1.02);
+.hero-media::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -1px;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to right, #ffffff 0%, rgba(255, 255, 255, 0.95) 18%, rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
+}
+
+.btn-icon-circle {
+    background-color: var(--color-primary);
+    color: var(--color-accent);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    margin-left: 10px;
+    vertical-align: middle;
 }
 
 /* ==========================================
@@ -576,8 +597,8 @@ img {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background-color: var(--color-soft-blue);
-    color: var(--color-primary);
+    background-color: var(--color-primary);
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
