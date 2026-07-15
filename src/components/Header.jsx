@@ -12,7 +12,7 @@ export default function Header({ onOpenBooking }) {
             // Active section logic
             const sections = ['hero', 'features', 'gallery', 'about', 'tickets', 'contact'];
             let current = 'hero';
-            
+
             for (const sectionId of sections) {
                 const el = document.getElementById(sectionId);
                 if (el) {
@@ -48,73 +48,73 @@ export default function Header({ onOpenBooking }) {
             <header className={`navbar-header ${isScrolled ? 'scrolled' : ''}`}>
                 <div className="container navbar-container">
                     <div className="logo-wrapper">
-                        <img src="assets/logo.png" alt="Waterboom Cijoho Indah Logo" className="brand-logo" />
+                        <img src="/assets/logo.png" alt="Waterboom Cijoho Indah Logo" className="brand-logo" />
                         <div className="brand-text">
                             <span className="brand-title">WATERBOOM</span>
                             <span className="brand-subtitle">CIJOHO INDAH</span>
                         </div>
                     </div>
-                    
+
                     <nav className="nav-menu">
                         <ul>
                             <li>
-                                <a 
-                                    href="#hero" 
-                                    onClick={(e) => handleLinkClick(e, 'hero')} 
+                                <a
+                                    href="#hero"
+                                    onClick={(e) => handleLinkClick(e, 'hero')}
                                     className={`nav-link ${activeSection === 'hero' ? 'active' : ''}`}
                                 >
                                     Beranda
                                 </a>
                             </li>
                             <li>
-                                <a 
-                                    href="#features" 
-                                    onClick={(e) => handleLinkClick(e, 'features')} 
+                                <a
+                                    href="#features"
+                                    onClick={(e) => handleLinkClick(e, 'features')}
                                     className={`nav-link ${activeSection === 'features' ? 'active' : ''}`}
                                 >
                                     Wahana
                                 </a>
                             </li>
                             <li>
-                                <a 
-                                    href="#gallery" 
-                                    onClick={(e) => handleLinkClick(e, 'gallery')} 
+                                <a
+                                    href="#gallery"
+                                    onClick={(e) => handleLinkClick(e, 'gallery')}
                                     className={`nav-link ${activeSection === 'gallery' ? 'active' : ''}`}
                                 >
                                     Galeri
                                 </a>
                             </li>
                             <li>
-                                <a 
-                                    href="#gallery" 
-                                    onClick={(e) => handleLinkClick(e, 'gallery')} 
+                                <a
+                                    href="#gallery"
+                                    onClick={(e) => handleLinkClick(e, 'gallery')}
                                     className="nav-link"
                                 >
                                     Berita
                                 </a>
                             </li>
                             <li>
-                                <a 
-                                    href="#features" 
-                                    onClick={(e) => handleLinkClick(e, 'features')} 
+                                <a
+                                    href="#features"
+                                    onClick={(e) => handleLinkClick(e, 'features')}
                                     className="nav-link"
                                 >
                                     Fasilitas
                                 </a>
                             </li>
                             <li>
-                                <a 
-                                    href="#about" 
-                                    onClick={(e) => handleLinkClick(e, 'about')} 
+                                <a
+                                    href="#about"
+                                    onClick={(e) => handleLinkClick(e, 'about')}
                                     className={`nav-link ${activeSection === 'about' ? 'active' : ''}`}
                                 >
                                     Tentang Kami
                                 </a>
                             </li>
                             <li>
-                                <a 
-                                    href="#contact" 
-                                    onClick={(e) => handleLinkClick(e, 'contact')} 
+                                <a
+                                    href="#contact"
+                                    onClick={(e) => handleLinkClick(e, 'contact')}
                                     className={`nav-link ${activeSection === 'contact' ? 'active' : ''}`}
                                 >
                                     Kontak
