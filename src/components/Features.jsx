@@ -8,11 +8,11 @@ export default function Features() {
                     {/* Feature 1 */}
                     <div className="feature-item">
                         <div className="feature-icon-wrapper">
-                            <img src="assets/pool.png.png" alt="Water Slides Icon" style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
+                            <img src="assets/pool.png.png" alt="Water Slides Icon" style={{ width: '92%', height: '92%', objectFit: 'contain' }} />
                         </div>
                         <div className="feature-info">
                             <h3>
-                                <img src="assets/pool.png.png" alt="" style={{ width: '20px', height: '20px', marginRight: '8px', verticalAlign: 'middle', objectFit: 'contain' }} />
+                                <img src="assets/pool.png.png" alt="" style={{ width: '26px', height: '26px', marginRight: '8px', verticalAlign: 'middle', objectFit: 'contain' }} />
                                 Water Slides
                             </h3>
                             <p>Exciting water slides for all ages.</p>
@@ -22,11 +22,11 @@ export default function Features() {
                     {/* Feature 2 */}
                     <div className="feature-item">
                         <div className="feature-icon-wrapper">
-                            <img src="assets/saung.png.png" alt="Gazebo & Rest Area Icon" style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
+                            <img src="assets/saung.png.png" alt="Gazebo & Rest Area Icon" style={{ width: '92%', height: '92%', objectFit: 'contain' }} />
                         </div>
                         <div className="feature-info">
                             <h3>
-                                <img src="assets/saung.png.png" alt="" style={{ width: '20px', height: '20px', marginRight: '8px', verticalAlign: 'middle', objectFit: 'contain' }} />
+                                <img src="assets/saung.png.png" alt="" style={{ width: '26px', height: '26px', marginRight: '8px', verticalAlign: 'middle', objectFit: 'contain' }} />
                                 Gazebo & Rest Area
                             </h3>
                             <p>Relax in our comfortable gazebos while enjoying the tropical atmosphere.</p>
@@ -36,11 +36,11 @@ export default function Features() {
                     {/* Feature 3 */}
                     <div className="feature-item">
                         <div className="feature-icon-wrapper">
-                            <img src="assets/kolam.png.png" alt="Swimming Pools Icon" style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
+                            <img src="assets/kolam.png.png" alt="Swimming Pools Icon" style={{ width: '92%', height: '92%', objectFit: 'contain' }} />
                         </div>
                         <div className="feature-info">
                             <h3>
-                                <img src="assets/kolam.png.png" alt="" style={{ width: '20px', height: '20px', marginRight: '8px', verticalAlign: 'middle', objectFit: 'contain' }} />
+                                <img src="assets/kolam.png.png" alt="" style={{ width: '26px', height: '26px', marginRight: '8px', verticalAlign: 'middle', objectFit: 'contain' }} />
                                 Swimming Pools
                             </h3>
                             <p>Clean and refreshing pools designed for kids and adults.</p>
