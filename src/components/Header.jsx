@@ -48,7 +48,7 @@ export default function Header({ onOpenBooking }) {
             <header className={`navbar-header ${isScrolled ? 'scrolled' : ''}`}>
                 <div className="container navbar-container">
                     <div className="logo-wrapper">
-                        <img src="/assets/logo.png" alt="Waterboom Cijoho Indah Logo" className="brand-logo" />
+                        <img src="assets/logo.png" alt="Waterboom Cijoho Indah Logo" className="brand-logo" />
                         <div className="brand-text">
                             <span className="brand-title">WATERBOOM</span>
                             <span className="brand-subtitle">CIJOHO INDAH</span>

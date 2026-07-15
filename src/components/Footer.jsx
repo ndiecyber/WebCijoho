@@ -19,7 +19,7 @@ export default function Footer() {
                 {/* Brand Column */}
                 <div className="footer-col brand-col">
                     <div className="logo-wrapper">
-                        <img src="/assets/logo.png" alt="Waterboom Cijoho Indah Logo" className="footer-logo" />
+                        <img src="assets/logo.png" alt="Waterboom Cijoho Indah Logo" className="footer-logo" />
                         <div className="brand-text">
                             <span className="brand-title text-white">WATERBOOM</span>
                             <span className="brand-subtitle text-green">CIJOHO INDAH</span>
