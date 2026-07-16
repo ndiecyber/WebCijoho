@@ -1,4 +1,4 @@
-import React from 'react';
+import { Link } from 'react-router-dom';
 
 export default function Gallery() {
     return (
@@ -6,7 +6,7 @@ export default function Gallery() {
             <div className="container">
                 <div className="gallery-header">
                     <h2 className="gallery-title">MOMEN SERU DI WATERBOOM CIJOHO INDAH</h2>
-                    <a href="#gallery" className="gallery-all-link">LIHAT SEMUA <i className="fa-solid fa-arrow-right"></i></a>
+                    <Link to="/galeri" className="gallery-all-link">LIHAT SEMUA <i className="fa-solid fa-arrow-right"></i></Link>
                 </div>
                 <div className="gallery-grid">
                     <div className="gallery-item card-hover">
