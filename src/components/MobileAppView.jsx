@@ -4,10 +4,10 @@ import { Link } from 'react-router-dom';
 export default function MobileAppView({ onOpenBooking }) {
     const [activeTab, setActiveTab] = useState('beranda');
     const [selectedTicket, setSelectedTicket] = useState('reguler');
-    const [ticketQty, setTicketQty] = useState(2);
-    const [sewaBan, setSewaBan] = useState(1);
+    const [ticketQty, setTicketQty] = useState(0);
+    const [sewaBan, setSewaBan] = useState(0);
     const [sewaSepeda, setSewaSepeda] = useState(0);
-    const [sewaGazebo, setSewaGazebo] = useState(1);
+    const [sewaGazebo, setSewaGazebo] = useState(0);
     const [showSidebar, setShowSidebar] = useState(false);
     const [showNotif, setShowNotif] = useState(false);
 
@@ -94,7 +94,7 @@ export default function MobileAppView({ onOpenBooking }) {
         ]);
 
         // Reset inputs
-        setTicketQty(2);
+        setTicketQty(0);
         setSewaBan(0);
         setSewaSepeda(0);
         setSewaGazebo(0);
@@ -251,7 +251,7 @@ export default function MobileAppView({ onOpenBooking }) {
                                 <div>
                                     <span className="counter-label-top">JUMLAH TIKET {selectedTicket.toUpperCase()}</span>
                                     <div className="counter-control">
-                                        <button className="counter-btn" onClick={() => ticketQty > 1 && setTicketQty(ticketQty - 1)}>-</button>
+                                        <button className="counter-btn" onClick={() => ticketQty > 0 && setTicketQty(ticketQty - 1)}>-</button>
                                         <span className="counter-value">{ticketQty}</span>
                                         <button className="counter-btn" onClick={() => setTicketQty(ticketQty + 1)}>+</button>
                                     </div>
