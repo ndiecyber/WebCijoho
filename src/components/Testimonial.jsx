@@ -12,7 +12,7 @@ export default function Testimonial() {
                     <cite className="testimonial-author">- Pengunjung Waterboom Cijoho Indah</cite>
                 </div>
                 <div className="testimonial-img-wrapper">
-                    <div className="testimonial-img-slice" style={{ backgroundImage: "url('assets/gallery_1.png')" }}></div>
+                    <div className="testimonial-img-slice" style={{ backgroundImage: "url('assets/1.png?v=1.1')" }}></div>
                 </div>
             </div>
         </section>

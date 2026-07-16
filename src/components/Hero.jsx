@@ -35,7 +35,7 @@ export default function Hero({ onOpenBooking }) {
                 </div>
             </div>
             <div className="hero-media">
-                <img src="assets/hero.png" alt="Waterboom Cijoho Indah Main Attraction" className="hero-img" />
+                <img src="assets/dash.jpeg?v=1.1" alt="Waterboom Cijoho Indah Main Attraction" className="hero-img" />
             </div>
         </section>
     );

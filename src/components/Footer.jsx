@@ -1,29 +1,20 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
-export default function Footer() {
-    const handleScrollToTop = (e, targetId) => {
-        e.preventDefault();
-        const target = document.getElementById(targetId);
-        if (target) {
-            const offsetPosition = target.offsetTop - 70;
-            window.scrollTo({
-                top: offsetPosition,
-                behavior: 'smooth'
-            });
-        }
-    };
-
+export default function Footer({ onOpenBooking }) {
     return (
         <footer id="contact" className="site-footer">
             <div className="container footer-grid">
                 {/* Brand Column */}
                 <div className="footer-col brand-col">
                     <div className="logo-wrapper">
-                        <img src="assets/logo.png" alt="Waterboom Cijoho Indah Logo" className="footer-logo" />
-                        <div className="brand-text">
-                            <span className="brand-title text-white">WATERBOOM</span>
-                            <span className="brand-subtitle text-green">CIJOHO INDAH</span>
-                        </div>
+                        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <img src="assets/logo.png" alt="Waterboom Cijoho Indah Logo" className="footer-logo" />
+                            <div className="brand-text">
+                                <span className="brand-title text-white">WATERBOOM</span>
+                                <span className="brand-subtitle text-green">CIJOHO INDAH</span>
+                            </div>
+                        </Link>
                     </div>
                     <p className="footer-about-text">
                         Sensasi seru tanpa batas untuk seluruh keluarga. Wahana permainan, suasana tropis, dan momen tak terlupakan.
@@ -39,38 +30,48 @@ export default function Footer() {
                 <div className="footer-col">
                     <h3>MENU UTAMA</h3>
                     <ul>
-                        <li><a href="#hero" onClick={(e) => handleScrollToTop(e, 'hero')}>Beranda</a></li>
-                        <li><a href="#features" onClick={(e) => handleScrollToTop(e, 'features')}>Wahana</a></li>
-                        <li><a href="#gallery" onClick={(e) => handleScrollToTop(e, 'gallery')}>Galeri</a></li>
-                        <li><a href="#gallery" onClick={(e) => handleScrollToTop(e, 'gallery')}>Berita</a></li>
+                        <li><Link to="/">Beranda</Link></li>
+                        <li><Link to="/wahana">Wahana</Link></li>
+                        <li><Link to="/galeri">Galeri</Link></li>
+                        <li><Link to="/berita">Berita</Link></li>
                     </ul>
                 </div>
                 {/* Layanan Column */}
                 <div className="footer-col">
                     <h3>LAYANAN</h3>
                     <ul>
-                        <li><a href="#tickets" onClick={(e) => handleScrollToTop(e, 'tickets')}>Daftar Tiket</a></li>
-                        <li><a href="#tickets" onClick={(e) => handleScrollToTop(e, 'tickets')}>Pesan Tiket Online</a></li>
-                        <li><a href="#tickets" onClick={(e) => handleScrollToTop(e, 'tickets')}>Paket Rombongan</a></li>
-                        <li><a href="#tickets" onClick={(e) => handleScrollToTop(e, 'tickets')}>Paket Ulang Tahun</a></li>
+                        <li><Link to="/#tickets">Daftar Tiket</Link></li>
+                        <li>
+                            <a 
+                                href="#" 
+                                onClick={(e) => { 
+                                    e.preventDefault(); 
+                                    onOpenBooking(); 
+                                }}
+                            >
+                                Pesan Tiket Online
+                            </a>
+                        </li>
+                        <li><Link to="/berita">Paket Rombongan</Link></li>
+                        <li><Link to="/kontak">Paket Ulang Tahun</Link></li>
                     </ul>
                 </div>
                 {/* Informasi Column */}
                 <div className="footer-col">
                     <h3>INFORMASI</h3>
                     <ul>
-                        <li><a href="#gallery" onClick={(e) => handleScrollToTop(e, 'gallery')}>Berita & Promo</a></li>
-                        <li><a href="#contact" onClick={(e) => handleScrollToTop(e, 'contact')}>Kontak & Lokasi</a></li>
-                        <li><a href="#features" onClick={(e) => handleScrollToTop(e, 'features')}>Jam Operasional</a></li>
+                        <li><Link to="/berita">Berita & Promo</Link></li>
+                        <li><Link to="/kontak">Kontak & Lokasi</Link></li>
+                        <li><Link to="/kontak">Jam Operasional</Link></li>
                     </ul>
                 </div>
                 {/* Ketentuan Column */}
                 <div className="footer-col">
                     <h3>KETENTUAN</h3>
                     <ul>
-                        <li><a href="#hero" onClick={(e) => handleScrollToTop(e, 'hero')}>Syarat & Ketentuan</a></li>
-                        <li><a href="#hero" onClick={(e) => handleScrollToTop(e, 'hero')}>Peraturan Pengunjung</a></li>
-                        <li><a href="#hero" onClick={(e) => handleScrollToTop(e, 'hero')}>Kebijakan Privasi</a></li>
+                        <li><Link to="/tentang-kami">Syarat & Ketentuan</Link></li>
+                        <li><Link to="/tentang-kami">Peraturan Pengunjung</Link></li>
+                        <li><Link to="/tentang-kami">Kebijakan Privasi</Link></li>
                     </ul>
                 </div>
             </div>

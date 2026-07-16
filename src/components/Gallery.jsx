@@ -10,19 +10,19 @@ export default function Gallery() {
                 </div>
                 <div className="gallery-grid">
                     <div className="gallery-item card-hover">
-                        <img src="assets/gallery_1.png" alt="Serunya seluncuran air" />
+                        <img src="assets/1.png?v=1.1" alt="Serunya seluncuran air" />
                     </div>
                     <div className="gallery-item card-hover">
-                        <img src="assets/gallery_2.png" alt="Gazebo rindang" />
+                        <img src="assets/2.png?v=1.1" alt="Gazebo rindang" />
                     </div>
                     <div className="gallery-item card-hover">
-                        <img src="assets/gallery_3.png" alt="Kolam utama" />
+                        <img src="assets/3.png?v=1.1" alt="Kolam utama" />
                     </div>
                     <div className="gallery-item card-hover">
-                        <img src="assets/gallery_4.png" alt="Suasana rindang" />
+                        <img src="assets/4.png?v=1.1" alt="Suasana rindang" />
                     </div>
                     <div className="gallery-item card-hover">
-                        <img src="assets/about.png" alt="Waterboom Cijoho" />
+                        <img src="assets/5.png?v=1.1" alt="Waterboom Cijoho" />
                     </div>
                 </div>
             </div>

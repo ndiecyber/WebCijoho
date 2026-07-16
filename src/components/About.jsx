@@ -41,7 +41,7 @@ export default function About({ onOpenBooking }) {
             <div className="container about-container">
                 <div className="about-media">
                     <div className="about-img-wrapper">
-                        <img src="assets/about.png" alt="Swimming pool in Cijoho Indah" className="about-img" />
+                        <img src="assets/bebek.png?v=1.1" alt="Swimming pool in Cijoho Indah" className="about-img" />
                         <div className="experience-badge animate-float">
                             <span className="exp-number">{count}</span>
                             <span className="exp-plus">+</span>

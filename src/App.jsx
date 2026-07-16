@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 import Header from './components/Header';
-import Hero from './components/Hero';
-import Features from './components/Features';
-import About from './components/About';
-import Tickets from './components/Tickets';
-import Testimonial from './components/Testimonial';
-import Gallery from './components/Gallery';
 import Footer from './components/Footer';
 import BookingModal from './components/BookingModal';
 import SuccessModal from './components/SuccessModal';
+import ScrollToTop from './components/ScrollToTop';
+
+// Import Pages
+import Home from './pages/Home';
+import WahanaPage from './pages/WahanaPage';
+import GaleriPage from './pages/GaleriPage';
+import BeritaPage from './pages/BeritaPage';
+import FasilitasPage from './pages/FasilitasPage';
+import TentangKamiPage from './pages/TentangKamiPage';
+import KontakPage from './pages/KontakPage';
 
 function App() {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -43,19 +48,23 @@ function App() {
   };
 
   return (
-    <>
+    <Router>
+      <ScrollToTop />
       <Header onOpenBooking={handleOpenBooking} />
       
       <main>
-        <Hero onOpenBooking={handleOpenBooking} />
-        <Features />
-        <About onOpenBooking={handleOpenBooking} />
-        <Tickets onOpenBooking={handleOpenBooking} />
-        <Testimonial />
-        <Gallery />
+        <Routes>
+          <Route path="/" element={<Home onOpenBooking={handleOpenBooking} />} />
+          <Route path="/wahana" element={<WahanaPage />} />
+          <Route path="/galeri" element={<GaleriPage />} />
+          <Route path="/berita" element={<BeritaPage />} />
+          <Route path="/fasilitas" element={<FasilitasPage />} />
+          <Route path="/tentang-kami" element={<TentangKamiPage />} />
+          <Route path="/kontak" element={<KontakPage />} />
+        </Routes>
       </main>
 
-      <Footer />
+      <Footer onOpenBooking={handleOpenBooking} />
 
       {/* Booking Form Overlay */}
       <BookingModal 
@@ -71,7 +80,7 @@ function App() {
         onClose={handleCloseSuccess} 
         details={bookingDetails}
       />
-    </>
+    </Router>
   );
 }
 

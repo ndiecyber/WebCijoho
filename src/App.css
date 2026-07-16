@@ -393,7 +393,7 @@ img {
     position: absolute;
     top: 0;
     right: 0;
-    width: 50%;
+    width: 58%;
     height: 100%;
     z-index: 1;
     overflow: hidden;
@@ -413,7 +413,7 @@ img {
     left: -1px;
     width: 100%;
     height: 100%;
-    background: linear-gradient(to right, #ffffff 0%, rgba(255, 255, 255, 0.95) 18%, rgba(255, 255, 255, 0) 100%);
+    background: linear-gradient(to right, #ffffff 0%, rgba(255, 255, 255, 0.95) 10%, rgba(255, 255, 255, 0) 30%);
     pointer-events: none;
 }
 
@@ -444,23 +444,23 @@ img {
 .features-bar {
     background-color: var(--color-primary);
     border-radius: var(--border-radius-lg);
-    padding: 30px 40px;
+    padding: 24px 25px;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 30px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
     box-shadow: var(--shadow-hard);
     color: white;
 }
 
 .features-bar > *:not(:last-child) {
     border-right: 1px solid rgba(255, 255, 255, 0.15);
-    padding-right: 30px;
+    padding-right: 15px;
 }
 
 .feature-item {
     display: flex;
     align-items: flex-start;
-    gap: 20px;
+    gap: 12px;
 }
 
 .feature-icon-wrapper {
@@ -487,7 +487,7 @@ img {
 
 .feature-info h3 {
     color: white;
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     margin-bottom: 6px;
 }
 
@@ -778,11 +778,11 @@ img {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%);
+    right: -30px; /* Stretch beyond container to eliminate blue border on the right */
+    bottom: 0;
+    background-size: 155%; /* Zoom in the image further */
+    background-position: center center;
+    clip-path: polygon(5% 0, 100% 0, 100% 100%, 0% 100%); /* Push slant closer to the left edge */
 }
 
 /* ==========================================
@@ -1137,6 +1137,23 @@ img {
 /* ==========================================
    RESPONSIVE DESIGN (MEDIA QUERIES)
    ========================================== */
+
+@media (max-width: 1100px) {
+    .features-bar {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 30px;
+    }
+    .features-bar > * {
+        border-right: none !important;
+        padding-right: 0 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        padding-bottom: 15px;
+    }
+    .features-bar > *:nth-last-child(-n+2) {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+}
 
 @media (max-width: 1024px) {
     .tickets-grid {
