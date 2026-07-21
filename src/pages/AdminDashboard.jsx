@@ -897,19 +897,61 @@ export default function AdminDashboard() {
 
                 {/* TAB: PEMASUKAN */}
                 {activeTab === 'pemasukan' && (
-                    <div className="chart-card-box">
-                        <h3>Analisis Detail Pemasukan</h3>
-                        <div className="donut-chart-flex" style={{ margin: '30px 0' }}>
-                            <div className="svg-donut-wrapper">
-                                <svg viewBox="0 0 100 100" width="160" height="160">
-                                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#eff6ff" strokeWidth="15"/>
-                                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1a73e8" strokeWidth="15" strokeDasharray="160 251.2" strokeDashoffset="0" transform="rotate(-90 50 50)"/>
-                                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="15" strokeDasharray="91.2 251.2" strokeDashoffset="-160" transform="rotate(-90 50 50)"/>
-                                </svg>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div className="chart-card-box">
+                            <h3>Rincian & Analisis Pemasukan</h3>
+                            <div className="donut-chart-flex" style={{ margin: '24px 0', alignItems: 'center' }}>
+                                <div className="svg-donut-wrapper">
+                                    <svg viewBox="0 0 100 100" width="180" height="180">
+                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#eff6ff" strokeWidth="15"/>
+                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1a73e8" strokeWidth="15" strokeDasharray="120 251.2" strokeDashoffset="0" transform="rotate(-90 50 50)"/>
+                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="15" strokeDasharray="67 251.2" strokeDashoffset="-120" transform="rotate(-90 50 50)"/>
+                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f59e0b" strokeWidth="15" strokeDasharray="24 251.2" strokeDashoffset="-187" transform="rotate(-90 50 50)"/>
+                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#6366f1" strokeWidth="15" strokeDasharray="29 251.2" strokeDashoffset="-211" transform="rotate(-90 50 50)"/>
+                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#ec4899" strokeWidth="15" strokeDasharray="11 251.2" strokeDashoffset="-240" transform="rotate(-90 50 50)"/>
+                                    </svg>
+                                </div>
+                                <div className="donut-legend-list" style={{ flexGrow: 1 }}>
+                                    <h3 style={{ fontSize: '1.25rem', color: '#0f172a', marginBottom: '6px' }}>Total Pemasukan: <span className="text-green">Rp {kpis.inflow.toLocaleString('id-ID')}</span></h3>
+                                    <p style={{ color: '#64748b', fontSize: '0.88rem', marginBottom: '16px' }}>Arus kas masuk bersumber dari Tiket Masuk (Offline & Online) serta Sewa Wahana & Peralatan.</p>
+                                    
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                                        <div className="legend-row"><span className="bullet blue"></span><div className="info"><span>Tiket Masuk Offline</span><strong>Rp 26.450.000 <small>(47.8%)</small></strong></div></div>
+                                        <div className="legend-row"><span className="bullet green"></span><div className="info"><span>Tiket Masuk Online</span><strong>Rp 14.850.000 <small>(26.8%)</small></strong></div></div>
+                                        <div className="legend-row"><span className="bullet orange"></span><div className="info"><span>Sewa Ban Renang</span><strong>Rp {rentals.ban.rev.toLocaleString('id-ID')} <small>(9.5%)</small></strong></div></div>
+                                        <div className="legend-row"><span className="bullet indigo"></span><div className="info"><span>Sewa Gazebo</span><strong>Rp {rentals.gazebo.rev.toLocaleString('id-ID')} <small>(11.6%)</small></strong></div></div>
+                                        <div className="legend-row"><span className="bullet pink"></span><div className="info"><span>Sewa Bebek / Angsa</span><strong>Rp {rentals.angsa.rev.toLocaleString('id-ID')} <small>(4.3%)</small></strong></div></div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="donut-legend-list" style={{ maxWidth: '400px' }}>
-                                <h3>Total Omzet: Rp {kpis.inflow.toLocaleString('id-ID')}</h3>
-                                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Pemasukan terbagi atas Tiket Masuk utama dan Sewa Alat/Wahana Tambahan.</p>
+                        </div>
+
+                        <div className="data-table-card">
+                            <div className="table-header-block">
+                                <h3>Daftar Log Transaksi Pemasukan Masuk</h3>
+                            </div>
+                            <div className="superadmin-table-wrapper" style={{ marginTop: '16px' }}>
+                                <table className="superadmin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tanggal</th><th>No. Transaksi</th><th>Jenis Pemasukan</th><th>Channel</th><th>Item / Produk</th><th>Qty</th><th>Total Nominal</th><th>Metode</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {history.map((item, idx) => (
+                                            <tr key={idx}>
+                                                <td className="text-secondary">{item.date}</td>
+                                                <td className="font-bold">{item.code}</td>
+                                                <td><span className={`type-badge ${item.type === 'Tiket Masuk' ? 'ticket' : 'rental'}`}>{item.type}</span></td>
+                                                <td><span className={`channel-badge ${item.channel === 'Offline' ? 'offline' : 'online'}`}>{item.channel}</span></td>
+                                                <td>{item.product}</td>
+                                                <td>{item.qty}</td>
+                                                <td className="font-bold text-green">Rp {item.total.toLocaleString('id-ID')}</td>
+                                                <td><span className={`method-badge ${item.method === 'QRIS' ? 'qris' : 'cash'}`}>{item.method}</span></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
