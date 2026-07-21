@@ -15,6 +15,22 @@ export default function AdminDashboard() {
         sewaLayanan: false
     });
 
+    // Sidebar Collapsible Section Headers (Buka/Tutup Tab Seksi)
+    const [sectionsOpen, setSectionsOpen] = useState({
+        penjualan: true,
+        keuangan: true,
+        laporan: true,
+        masterData: true,
+        pengaturan: true
+    });
+
+    const toggleSection = (secKey) => {
+        setSectionsOpen(prev => ({
+            ...prev,
+            [secKey]: !prev[secKey]
+        }));
+    };
+
     // Date range filter
     const [dateRange, setDateRange] = useState('15 Mei 2025 - 21 Mei 2025');
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -426,79 +442,113 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* PENJUALAN */}
-                    <div className="sidebar-section-header">PENJUALAN</div>
-                    
-                    <div className={`nav-menu-dropdown-wrapper ${menuOpen.tiketMasuk ? 'open' : ''}`}>
-                        <div className="nav-menu-item dropdown-toggle" onClick={() => toggleSubmenu('tiketMasuk')}>
-                            <span><i className="fa-solid fa-ticket"></i> Tiket Masuk</span>
-                            <i className="fa-solid fa-chevron-down caret-icon"></i>
-                        </div>
-                        <ul className="dropdown-submenu-list">
-                            <li><a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSelectedFilter('offline'); }}>Penjualan Offline</a></li>
-                            <li><a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSelectedFilter('online'); }}>Penjualan Online</a></li>
-                        </ul>
+                    <div className="sidebar-section-header clickable-header" onClick={() => toggleSection('penjualan')}>
+                        <span>PENJUALAN</span>
+                        <i className={`fa-solid fa-chevron-${sectionsOpen.penjualan ? 'down' : 'right'} section-caret`}></i>
                     </div>
+                    {sectionsOpen.penjualan && (
+                        <div className="section-menu-group">
+                            <div className={`nav-menu-dropdown-wrapper ${menuOpen.tiketMasuk ? 'open' : ''}`}>
+                                <div className="nav-menu-item dropdown-toggle" onClick={() => toggleSubmenu('tiketMasuk')}>
+                                    <span><i className="fa-solid fa-ticket"></i> Tiket Masuk</span>
+                                    <i className="fa-solid fa-chevron-down caret-icon"></i>
+                                </div>
+                                <ul className="dropdown-submenu-list">
+                                    <li><a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSelectedFilter('offline'); }}>Penjualan Offline</a></li>
+                                    <li><a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSelectedFilter('online'); }}>Penjualan Online</a></li>
+                                </ul>
+                            </div>
 
-                    <div className={`nav-menu-dropdown-wrapper ${menuOpen.sewaLayanan ? 'open' : ''}`}>
-                        <div className="nav-menu-item dropdown-toggle" onClick={() => toggleSubmenu('sewaLayanan')}>
-                            <span><i className="fa-solid fa-parachute-box"></i> Sewa & Layanan</span>
-                            <i className="fa-solid fa-chevron-down caret-icon"></i>
-                        </div>
-                        <ul className="dropdown-submenu-list">
-                            <li><a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSearchQuery('Ban'); }}>Sewa Ban</a></li>
-                            <li><a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSearchQuery('Gazebo'); }}>Sewa Gazebo</a></li>
-                            <li><a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSearchQuery('Angsa'); }}>Sewa Angsa</a></li>
-                        </ul>
-                    </div>
+                            <div className={`nav-menu-dropdown-wrapper ${menuOpen.sewaLayanan ? 'open' : ''}`}>
+                                <div className="nav-menu-item dropdown-toggle" onClick={() => toggleSubmenu('sewaLayanan')}>
+                                    <span><i className="fa-solid fa-parachute-box"></i> Sewa & Layanan</span>
+                                    <i className="fa-solid fa-chevron-down caret-icon"></i>
+                                </div>
+                                <ul className="dropdown-submenu-list">
+                                    <li><a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSearchQuery('Ban'); }}>Sewa Ban</a></li>
+                                    <li><a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSearchQuery('Gazebo'); }}>Sewa Gazebo</a></li>
+                                    <li><a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSearchQuery('Angsa'); }}>Sewa Angsa</a></li>
+                                </ul>
+                            </div>
 
-                    <div className={`nav-menu-item ${activeTab === 'transaksi' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSelectedFilter('all'); setSearchQuery(''); }}><i className="fa-solid fa-receipt"></i> Transaksi</a>
-                    </div>
+                            <div className={`nav-menu-item ${activeTab === 'transaksi' ? 'active' : ''}`}>
+                                <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSelectedFilter('all'); setSearchQuery(''); }}><i className="fa-solid fa-receipt"></i> Transaksi</a>
+                            </div>
+                        </div>
+                    )}
 
                     {/* KEUANGAN */}
-                    <div className="sidebar-section-header">KEUANGAN</div>
-                    <div className={`nav-menu-item ${activeTab === 'pemasukan' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pemasukan'); }}><i className="fa-solid fa-vault"></i> Pemasukan</a>
+                    <div className="sidebar-section-header clickable-header" onClick={() => toggleSection('keuangan')}>
+                        <span>KEUANGAN</span>
+                        <i className={`fa-solid fa-chevron-${sectionsOpen.keuangan ? 'down' : 'right'} section-caret`}></i>
                     </div>
-                    <div className={`nav-menu-item ${activeTab === 'pengeluaran' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengeluaran'); }}><i className="fa-solid fa-circle-minus"></i> Pengeluaran</a>
-                    </div>
+                    {sectionsOpen.keuangan && (
+                        <div className="section-menu-group">
+                            <div className={`nav-menu-item ${activeTab === 'pemasukan' ? 'active' : ''}`}>
+                                <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pemasukan'); }}><i className="fa-solid fa-vault"></i> Pemasukan</a>
+                            </div>
+                            <div className={`nav-menu-item ${activeTab === 'pengeluaran' ? 'active' : ''}`}>
+                                <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengeluaran'); }}><i className="fa-solid fa-circle-minus"></i> Pengeluaran</a>
+                            </div>
+                        </div>
+                    )}
 
                     {/* LAPORAN */}
-                    <div className="sidebar-section-header">LAPORAN</div>
-                    <div className={`nav-menu-item ${activeTab === 'rekap_keuangan' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('rekap_keuangan'); }}><i className="fa-solid fa-vault"></i> Rekap Keuangan</a>
+                    <div className="sidebar-section-header clickable-header" onClick={() => toggleSection('laporan')}>
+                        <span>LAPORAN</span>
+                        <i className={`fa-solid fa-chevron-${sectionsOpen.laporan ? 'down' : 'right'} section-caret`}></i>
                     </div>
-                    <div className={`nav-menu-item ${activeTab === 'laporan_penjualan' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('laporan_penjualan'); }}><i className="fa-solid fa-file-lines"></i> Laporan Penjualan</a>
-                    </div>
-                    <div className={`nav-menu-item ${activeTab === 'laporan_layanan' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('laporan_layanan'); }}><i className="fa-solid fa-receipt"></i> Laporan Layanan</a>
-                    </div>
+                    {sectionsOpen.laporan && (
+                        <div className="section-menu-group">
+                            <div className={`nav-menu-item ${activeTab === 'rekap_keuangan' ? 'active' : ''}`}>
+                                <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('rekap_keuangan'); }}><i className="fa-solid fa-vault"></i> Rekap Keuangan</a>
+                            </div>
+                            <div className={`nav-menu-item ${activeTab === 'laporan_penjualan' ? 'active' : ''}`}>
+                                <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('laporan_penjualan'); }}><i className="fa-solid fa-file-lines"></i> Laporan Penjualan</a>
+                            </div>
+                            <div className={`nav-menu-item ${activeTab === 'laporan_layanan' ? 'active' : ''}`}>
+                                <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('laporan_layanan'); }}><i className="fa-solid fa-receipt"></i> Laporan Layanan</a>
+                            </div>
+                        </div>
+                    )}
 
                     {/* MASTER DATA */}
-                    <div className="sidebar-section-header">MASTER DATA</div>
-                    <div className={`nav-menu-item ${activeTab === 'produk_harga' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('produk_harga'); }}><i className="fa-solid fa-store"></i> Produk & Harga</a>
+                    <div className="sidebar-section-header clickable-header" onClick={() => toggleSection('masterData')}>
+                        <span>MASTER DATA</span>
+                        <i className={`fa-solid fa-chevron-${sectionsOpen.masterData ? 'down' : 'right'} section-caret`}></i>
                     </div>
-                    <div className={`nav-menu-item ${activeTab === 'paket_promo' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('paket_promo'); }}><i className="fa-solid fa-tags"></i> Paket & Promo</a>
-                    </div>
-                    <div className={`nav-menu-item ${activeTab === 'kategori' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('kategori'); }}><i className="fa-solid fa-folder"></i> Kategori</a>
-                    </div>
-                    <div className={`nav-menu-item ${activeTab === 'pengunjung' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengunjung'); }}><i className="fa-solid fa-users"></i> Pengunjung</a>
-                    </div>
+                    {sectionsOpen.masterData && (
+                        <div className="section-menu-group">
+                            <div className={`nav-menu-item ${activeTab === 'produk_harga' ? 'active' : ''}`}>
+                                <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('produk_harga'); }}><i className="fa-solid fa-store"></i> Produk & Harga</a>
+                            </div>
+                            <div className={`nav-menu-item ${activeTab === 'paket_promo' ? 'active' : ''}`}>
+                                <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('paket_promo'); }}><i className="fa-solid fa-tags"></i> Paket & Promo</a>
+                            </div>
+                            <div className={`nav-menu-item ${activeTab === 'kategori' ? 'active' : ''}`}>
+                                <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('kategori'); }}><i className="fa-solid fa-folder"></i> Kategori</a>
+                            </div>
+                            <div className={`nav-menu-item ${activeTab === 'pengunjung' ? 'active' : ''}`}>
+                                <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengunjung'); }}><i className="fa-solid fa-users"></i> Pengunjung</a>
+                            </div>
+                        </div>
+                    )}
 
                     {/* PENGATURAN */}
-                    <div className="sidebar-section-header">PENGATURAN</div>
-                    <div className={`nav-menu-item ${activeTab === 'pengaturan_sistem' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengaturan_sistem'); }}><i className="fa-solid fa-gear"></i> Pengaturan Sistem</a>
+                    <div className="sidebar-section-header clickable-header" onClick={() => toggleSection('pengaturan')}>
+                        <span>PENGATURAN</span>
+                        <i className={`fa-solid fa-chevron-${sectionsOpen.pengaturan ? 'down' : 'right'} section-caret`}></i>
                     </div>
-                    <div className={`nav-menu-item ${activeTab === 'pengguna' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengguna'); }}><i className="fa-solid fa-user-gear"></i> Pengguna</a>
-                    </div>
+                    {sectionsOpen.pengaturan && (
+                        <div className="section-menu-group">
+                            <div className={`nav-menu-item ${activeTab === 'pengaturan_sistem' ? 'active' : ''}`}>
+                                <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengaturan_sistem'); }}><i className="fa-solid fa-gear"></i> Pengaturan Sistem</a>
+                            </div>
+                            <div className={`nav-menu-item ${activeTab === 'pengguna' ? 'active' : ''}`}>
+                                <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengguna'); }}><i className="fa-solid fa-user-gear"></i> Pengguna</a>
+                            </div>
+                        </div>
+                    )}
                 </nav>
 
                 <div className="sidebar-logout-footer">
