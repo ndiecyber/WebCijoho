@@ -620,11 +620,11 @@ export default function AdminDashboard() {
                 {(activeTab === 'dashboard' || activeTab === 'transaksi' || activeTab === 'pemasukan' || activeTab === 'pengeluaran') && (
                     <div className="superadmin-kpi-grid">
                         <div className="kpi-card-card blue">
-                            <div className="kpi-icon-square"><i className="fa-solid fa-chart-line"></i></div>
+                            <div className="kpi-icon-square"><i className="fa-solid fa-ticket"></i></div>
                             <div className="kpi-meta-box">
                                 <span className="label">Total Penjualan</span>
                                 <h3>Rp {kpis.sales.toLocaleString('id-ID')}</h3>
-                                <span className="trend positive"><i className="fa-solid fa-caret-up"></i> 12.5%</span>
+                                <span className="trend positive"><i className="fa-solid fa-caret-up"></i> 12.5% <small>dari periode lalu</small></span>
                             </div>
                         </div>
                         <div className="kpi-card-card green">
@@ -632,7 +632,7 @@ export default function AdminDashboard() {
                             <div className="kpi-meta-box">
                                 <span className="label">Total Pemasukan</span>
                                 <h3>Rp {kpis.inflow.toLocaleString('id-ID')}</h3>
-                                <span className="trend positive"><i className="fa-solid fa-caret-up"></i> 15.3%</span>
+                                <span className="trend positive"><i className="fa-solid fa-caret-up"></i> 15.3% <small>dari periode lalu</small></span>
                             </div>
                         </div>
                         <div className="kpi-card-card red">
@@ -640,7 +640,7 @@ export default function AdminDashboard() {
                             <div className="kpi-meta-box">
                                 <span className="label">Total Pengeluaran</span>
                                 <h3>Rp {kpis.outflow.toLocaleString('id-ID')}</h3>
-                                <span className="trend positive"><i className="fa-solid fa-caret-up"></i> 5.1%</span>
+                                <span className="trend positive negative"><i className="fa-solid fa-caret-up"></i> 5.1% <small>dari periode lalu</small></span>
                             </div>
                         </div>
                         <div className="kpi-card-card orange">
@@ -648,7 +648,7 @@ export default function AdminDashboard() {
                             <div className="kpi-meta-box">
                                 <span className="label">Total Pengunjung</span>
                                 <h3>{kpis.visitors.toLocaleString('id-ID')}</h3>
-                                <span className="trend positive"><i className="fa-solid fa-caret-up"></i> 13.8%</span>
+                                <span className="trend positive"><i className="fa-solid fa-caret-up"></i> 13.8% <small>dari periode lalu</small></span>
                             </div>
                         </div>
                         <div className="kpi-card-card purple">
@@ -656,7 +656,7 @@ export default function AdminDashboard() {
                             <div className="kpi-meta-box">
                                 <span className="label">Total Transaksi</span>
                                 <h3>{kpis.transactions.toLocaleString('id-ID')}</h3>
-                                <span className="trend positive"><i className="fa-solid fa-caret-up"></i> 10.7%</span>
+                                <span className="trend positive"><i className="fa-solid fa-caret-up"></i> 10.7% <small>dari periode lalu</small></span>
                             </div>
                         </div>
                     </div>
