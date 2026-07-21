@@ -458,34 +458,34 @@ export default function AdminDashboard() {
                     {/* KEUANGAN */}
                     <div className="sidebar-section-header">KEUANGAN</div>
                     <div className={`nav-menu-item ${activeTab === 'pemasukan' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pemasukan'); }}><i className="fa-solid fa-circle-arrow-down text-green"></i> Pemasukan</a>
+                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pemasukan'); }}><i className="fa-solid fa-vault"></i> Pemasukan</a>
                     </div>
                     <div className={`nav-menu-item ${activeTab === 'pengeluaran' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengeluaran'); }}><i className="fa-solid fa-circle-arrow-up text-red"></i> Pengeluaran</a>
+                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengeluaran'); }}><i className="fa-solid fa-circle-minus"></i> Pengeluaran</a>
                     </div>
 
                     {/* LAPORAN */}
                     <div className="sidebar-section-header">LAPORAN</div>
                     <div className={`nav-menu-item ${activeTab === 'rekap_keuangan' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('rekap_keuangan'); }}><i className="fa-solid fa-file-invoice-dollar"></i> Rekap Keuangan</a>
+                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('rekap_keuangan'); }}><i className="fa-solid fa-vault"></i> Rekap Keuangan</a>
                     </div>
                     <div className={`nav-menu-item ${activeTab === 'laporan_penjualan' ? 'active' : ''}`}>
                         <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('laporan_penjualan'); }}><i className="fa-solid fa-file-lines"></i> Laporan Penjualan</a>
                     </div>
                     <div className={`nav-menu-item ${activeTab === 'laporan_layanan' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('laporan_layanan'); }}><i className="fa-solid fa-file-shield"></i> Laporan Layanan</a>
+                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('laporan_layanan'); }}><i className="fa-solid fa-receipt"></i> Laporan Layanan</a>
                     </div>
 
                     {/* MASTER DATA */}
                     <div className="sidebar-section-header">MASTER DATA</div>
                     <div className={`nav-menu-item ${activeTab === 'produk_harga' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('produk_harga'); }}><i className="fa-solid fa-tags"></i> Produk & Harga</a>
+                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('produk_harga'); }}><i className="fa-solid fa-store"></i> Produk & Harga</a>
                     </div>
                     <div className={`nav-menu-item ${activeTab === 'paket_promo' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('paket_promo'); }}><i className="fa-solid fa-gift"></i> Paket & Promo</a>
+                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('paket_promo'); }}><i className="fa-solid fa-tags"></i> Paket & Promo</a>
                     </div>
                     <div className={`nav-menu-item ${activeTab === 'kategori' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('kategori'); }}><i className="fa-solid fa-cubes"></i> Kategori</a>
+                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('kategori'); }}><i className="fa-solid fa-folder"></i> Kategori</a>
                     </div>
                     <div className={`nav-menu-item ${activeTab === 'pengunjung' ? 'active' : ''}`}>
                         <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengunjung'); }}><i className="fa-solid fa-users"></i> Pengunjung</a>
@@ -494,7 +494,7 @@ export default function AdminDashboard() {
                     {/* PENGATURAN */}
                     <div className="sidebar-section-header">PENGATURAN</div>
                     <div className={`nav-menu-item ${activeTab === 'pengaturan_sistem' ? 'active' : ''}`}>
-                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengaturan_sistem'); }}><i className="fa-solid fa-gears"></i> Pengaturan Sistem</a>
+                        <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengaturan_sistem'); }}><i className="fa-solid fa-gear"></i> Pengaturan Sistem</a>
                     </div>
                     <div className={`nav-menu-item ${activeTab === 'pengguna' ? 'active' : ''}`}>
                         <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('pengguna'); }}><i className="fa-solid fa-user-gear"></i> Pengguna</a>
