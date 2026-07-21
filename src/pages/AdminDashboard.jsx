@@ -560,6 +560,7 @@ export default function AdminDashboard() {
 
             {/* 2. MAIN CONTENT AREA */}
             <main className="superadmin-main">
+                <div className="superadmin-content-wrapper">
                 {/* Topbar/Header info */}
                 <header className="superadmin-header">
                     <div className="header-title-column">
@@ -740,8 +741,14 @@ export default function AdminDashboard() {
                                 <h3>Penjualan Tiket Masuk</h3>
                                 <div className="channel-box">
                                     <div className="channel-info-row">
-                                        <div className="channel-title"><i className="fa-solid fa-store"></i><div><strong>Offline</strong><span>1.452 Tiket</span></div></div>
-                                        <div className="channel-value">Rp 26.450.000</div>
+                                        <div className="channel-title">
+                                            <div className="channel-icon-square blue"><i className="fa-solid fa-store"></i></div>
+                                            <div>
+                                                <span className="channel-label">Offline</span>
+                                                <div className="channel-value">Rp 26.450.000</div>
+                                                <span className="channel-sub">1.452 Tiket</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="bar-wrapper">
                                         <div className="bar-fill blue" style={{ width: '57%' }}></div>
@@ -750,8 +757,14 @@ export default function AdminDashboard() {
                                 </div>
                                 <div className="channel-box">
                                     <div className="channel-info-row">
-                                        <div className="channel-title"><i className="fa-solid fa-globe"></i><div><strong>Online</strong><span>904 Tiket</span></div></div>
-                                        <div className="channel-value">Rp 14.850.000</div>
+                                        <div className="channel-title">
+                                            <div className="channel-icon-square green"><i className="fa-solid fa-globe"></i></div>
+                                            <div>
+                                                <span className="channel-label">Online</span>
+                                                <div className="channel-value">Rp 14.850.000</div>
+                                                <span className="channel-sub">904 Tiket</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="bar-wrapper">
                                         <div className="bar-fill green" style={{ width: '43%' }}></div>
@@ -780,16 +793,27 @@ export default function AdminDashboard() {
                                                 <tr key={idx}>
                                                     <td className="text-secondary">{item.date}</td>
                                                     <td className="font-bold">{item.code}</td>
-                                                    <td><span className={`type-badge ${item.type === 'Tiket Masuk' ? 'ticket' : 'rental'}`}>{item.type}</span></td>
+                                                    <td><span className={`type-badge ${item.type === 'Tiket Masuk' ? 'ticket' : 'rental'}`}><i className={`fa-solid ${item.type === 'Tiket Masuk' ? 'fa-ticket' : 'fa-parachute-box'}`}></i> {item.type}</span></td>
                                                     <td><span className={`channel-badge ${item.channel === 'Offline' ? 'offline' : 'online'}`}>{item.channel}</span></td>
                                                     <td>{item.product}</td>
                                                     <td>{item.qty}</td>
                                                     <td className="font-bold">Rp {item.total.toLocaleString('id-ID')}</td>
-                                                    <td><span className={`method-badge ${item.method === 'QRIS' ? 'qris' : 'cash'}`}>{item.method}</span></td>
+                                                    <td><span className="method-text">{item.method}</span></td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
+                                </div>
+                                <div className="table-pagination-bar">
+                                    <button className="page-nav-btn"><i className="fa-solid fa-chevron-left"></i></button>
+                                    <button className="page-num active">1</button>
+                                    <button className="page-num">2</button>
+                                    <button className="page-num">3</button>
+                                    <button className="page-num">4</button>
+                                    <button className="page-num">5</button>
+                                    <span className="dots">...</span>
+                                    <button className="page-num">205</button>
+                                    <button className="page-nav-btn"><i className="fa-solid fa-chevron-right"></i></button>
                                 </div>
                             </div>
 
@@ -797,6 +821,7 @@ export default function AdminDashboard() {
                             <div className="data-table-card rental-summary">
                                 <div className="table-header-block">
                                     <h3>Ringkasan Layanan (Sewa)</h3>
+                                    <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); }} className="view-all-link">Lihat Semua</a>
                                 </div>
                                 <div className="superadmin-table-wrapper">
                                     <table className="superadmin-table">
@@ -804,10 +829,10 @@ export default function AdminDashboard() {
                                             <tr><th>Layanan</th><th>Terjual</th><th>Pemasukan</th></tr>
                                         </thead>
                                         <tbody>
-                                            <tr><td><div className="service-name-row"><span className="bullet orange"></span> Sewa Ban</div></td><td>{rentals.ban.qty}</td><td className="font-bold">Rp {rentals.ban.rev.toLocaleString('id-ID')}</td></tr>
-                                            <tr><td><div className="service-name-row"><span className="bullet indigo"></span> Sewa Gazebo</div></td><td>{rentals.gazebo.qty}</td><td className="font-bold">Rp {rentals.gazebo.rev.toLocaleString('id-ID')}</td></tr>
-                                            <tr><td><div className="service-name-row"><span className="bullet pink"></span> Sewa Angsa</div></td><td>{rentals.angsa.qty}</td><td className="font-bold">Rp {rentals.angsa.rev.toLocaleString('id-ID')}</td></tr>
-                                            <tr className="total-row-highlight"><td><strong>Total</strong></td><td><strong>{rentals.totalQty}</strong></td><td className="font-bold text-blue"><strong>Rp {rentals.totalRev.toLocaleString('id-ID')}</strong></td></tr>
+                                            <tr><td><div className="service-name-row"><span className="service-square-icon green"><i className="fa-solid fa-[#10b981] fa-circle-dot"></i></span> Sewa Ban</div></td><td>{rentals.ban.qty}</td><td className="font-bold">Rp {rentals.ban.rev.toLocaleString('id-ID')}</td></tr>
+                                            <tr><td><div className="service-name-row"><span className="service-square-icon orange"><i className="fa-solid fa-[#f59e0b] fa-house"></i></span> Sewa Gazebo</div></td><td>{rentals.gazebo.qty}</td><td className="font-bold">Rp {rentals.gazebo.rev.toLocaleString('id-ID')}</td></tr>
+                                            <tr><td><div className="service-name-row"><span className="service-square-icon purple"><i className="fa-solid fa-[#8b5cf6] fa-feather"></i></span> Sewa Angsa</div></td><td>{rentals.angsa.qty}</td><td className="font-bold">Rp {rentals.angsa.rev.toLocaleString('id-ID')}</td></tr>
+                                            <tr className="total-row-highlight"><td><strong>Total</strong></td><td><strong>1.085</strong></td><td className="font-bold text-blue"><strong>Rp 14.050.000</strong></td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -819,14 +844,18 @@ export default function AdminDashboard() {
                             <div className="chart-card-box payment-methods-card">
                                 <h3>Metode Pembayaran</h3>
                                 <div className="payment-chart-wrap">
-                                    <svg viewBox="0 0 100 100" width="100" height="100">
-                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#eff6ff" strokeWidth="15"/>
-                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="15" strokeDasharray="134 251.2" strokeDashoffset="0" transform="rotate(-90 50 50)"/>
-                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#0ea5e9" strokeWidth="15" strokeDasharray="106 251.2" strokeDashoffset="-134" transform="rotate(-90 50 50)"/>
-                                    </svg>
+                                    <div className="svg-donut-wrapper">
+                                        <svg viewBox="0 0 100 100" width="120" height="120">
+                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#eff6ff" strokeWidth="15"/>
+                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1a73e8" strokeWidth="15" strokeDasharray="134 251.2" strokeDashoffset="0" transform="rotate(-90 50 50)"/>
+                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="15" strokeDasharray="106 251.2" strokeDashoffset="-134" transform="rotate(-90 50 50)"/>
+                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f59e0b" strokeWidth="15" strokeDasharray="11 251.2" strokeDashoffset="-240" transform="rotate(-90 50 50)"/>
+                                        </svg>
+                                    </div>
                                     <div className="donut-legend-list">
-                                        <div className="legend-row"><span className="bullet green"></span><div className="info"><span>Tunai</span><strong>53.4%</strong></div></div>
-                                        <div className="legend-row"><span className="bullet blue"></span><div className="info"><span>QRIS</span><strong>42.4%</strong></div></div>
+                                        <div className="legend-row"><span className="bullet blue"></span><div className="info"><span>Tunai</span><strong>Rp 29.580.000 <small>(53.4%)</small></strong></div></div>
+                                        <div className="legend-row"><span className="bullet green"></span><div className="info"><span>QRIS</span><strong>Rp 23.450.000 <small>(42.4%)</small></strong></div></div>
+                                        <div className="legend-row"><span className="bullet orange"></span><div className="info"><span>Transfer</span><strong>Rp 2.320.000 <small>(4.2%)</small></strong></div></div>
                                     </div>
                                 </div>
                             </div>
@@ -834,12 +863,15 @@ export default function AdminDashboard() {
                             <div className="chart-card-box daily-visitors-card">
                                 <h3>Pengunjung Harian</h3>
                                 <div className="visitors-chart-container">
-                                    <div className="y-axis-labels"><span>800</span><span>400</span><span>0</span></div>
+                                    <div className="y-axis-labels"><span>800</span><span>600</span><span>400</span><span>200</span><span>0</span></div>
                                     <div className="bar-chart-bars">
                                         <div className="chart-col"><div className="bar-fill" style={{ height: '55%' }}></div><span className="label">15 Mei</span></div>
-                                        <div className="chart-col"><div className="bar-fill" style={{ height: '70%' }}></div><span className="label">17 Mei</span></div>
-                                        <div className="chart-col"><div className="bar-fill" style={{ height: '90%' }}></div><span className="label">18 Mei</span></div>
-                                        <div className="chart-col"><div className="bar-fill" style={{ height: '75%' }}></div><span className="label">21 Mei</span></div>
+                                        <div className="chart-col"><div className="bar-fill" style={{ height: '50%' }}></div><span className="label">16 Mei</span></div>
+                                        <div className="chart-col"><div className="bar-fill" style={{ height: '80%' }}></div><span className="label">17 Mei</span></div>
+                                        <div className="chart-col"><div className="bar-fill" style={{ height: '75%' }}></div><span className="label">18 Mei</span></div>
+                                        <div className="chart-col"><div className="bar-fill" style={{ height: '75%' }}></div><span className="label">19 Mei</span></div>
+                                        <div className="chart-col"><div className="bar-fill" style={{ height: '50%' }}></div><span className="label">20 Mei</span></div>
+                                        <div className="chart-col"><div className="bar-fill" style={{ height: '60%' }}></div><span className="label">21 Mei</span></div>
                                     </div>
                                 </div>
                             </div>
@@ -852,12 +884,13 @@ export default function AdminDashboard() {
                                 <div className="superadmin-table-wrapper">
                                     <table className="superadmin-table">
                                         <thead>
-                                            <tr><th>Tanggal</th><th>Deskripsi</th><th>Jumlah</th></tr>
+                                            <tr><th>Tanggal</th><th>Kategori</th><th>Deskripsi</th><th>Jumlah</th></tr>
                                         </thead>
                                         <tbody>
                                             {expenditures.slice(0, 3).map((item, idx) => (
                                                 <tr key={idx}>
                                                     <td className="text-secondary">{item.date}</td>
+                                                    <td><span className="category-badge-simple">{item.category}</span></td>
                                                     <td>{item.desc}</td>
                                                     <td className="font-bold text-red">Rp {item.amount.toLocaleString('id-ID')}</td>
                                                 </tr>
@@ -1458,6 +1491,7 @@ export default function AdminDashboard() {
                         </div>
                     </form>
                 )}
+                </div>
             </main>
         </div>
     );
