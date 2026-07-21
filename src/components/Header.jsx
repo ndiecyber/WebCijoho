@@ -144,6 +144,9 @@ export default function Header({ onOpenBooking }) {
                     </nav>
 
                     <div className="nav-actions">
+                        <Link to="/login" className="btn-portal-staf" style={{ marginRight: '10px' }}>
+                            <i className="fa-solid fa-user-lock"></i> Portal Staf
+                        </Link>
                         <button className="btn btn-accent btn-pill" onClick={() => onOpenBooking()}>
                             <i className="fa-solid fa-ticket"></i> PESAN TIKET
                         </button>
@@ -177,6 +180,11 @@ export default function Header({ onOpenBooking }) {
                         <button className="btn btn-accent btn-pill w-full" onClick={() => { setIsDrawerOpen(false); onOpenBooking(); }}>
                             <i className="fa-solid fa-ticket"></i> PESAN TIKET
                         </button>
+                    </li>
+                    <li style={{ marginTop: '10px' }}>
+                        <Link to="/login" onClick={() => setIsDrawerOpen(false)} className="btn btn-outline-blue btn-pill w-full" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', fontWeight: 700 }}>
+                            <i className="fa-solid fa-user-lock"></i> PORTAL STAF
+                        </Link>
                     </li>
                 </ul>
             </div>

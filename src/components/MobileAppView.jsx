@@ -26,16 +26,27 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
 
     // Purchase history & active tickets
     const [activeTicketData, setActiveTicketData] = useState(null);
-    const [historyList, setHistoryList] = useState([
-        {
-            code: 'WCI-823902',
-            date: '10 Juli 2026',
-            type: 'Tiket Reguler',
-            qty: 3,
-            total: 60000,
-            status: 'Sudah Digunakan'
-        }
-    ]);
+    const [historyList, setHistoryList] = useState(() => {
+        const saved = localStorage.getItem('waterboom_sales_history');
+        if (saved) return JSON.parse(saved);
+        return [
+            {
+                code: 'WCI-823902',
+                date: '18 Juli 2026',
+                type: 'Tiket Reguler',
+                qty: 3,
+                total: 65000,
+                status: 'Lunas',
+                details: {
+                    ticketTypeKey: 'reguler',
+                    qty: 3,
+                    subtotal: 60000,
+                    rentals: { ban: 1, sepeda: 0, gazebo: 0 },
+                    total: 65000
+                }
+            }
+        ];
+    });
 
     // Slider state for Hero Card
     const sliderImages = [
@@ -52,19 +63,38 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
         return () => clearInterval(interval);
     }, []);
 
-    // Price Constants
-    const PRICES = {
-        tickets: {
-            reguler: 20000,
-            rombongan: 17000,
-            kursus: 15000
-        },
-        rentals: {
-            ban: 5000,
-            sepeda: 5000,
-            gazebo: 20000
-        }
-    };
+    // Price State synchronized with localStorage
+    const [PRICES, setPRICES] = useState(() => {
+        const saved = localStorage.getItem('waterboom_prices');
+        if (saved) return JSON.parse(saved);
+        return {
+            tickets: {
+                reguler: 20000,
+                rombongan: 17000,
+                kursus: 15000
+            },
+            rentals: {
+                ban: 5000,
+                sepeda: 5000,
+                gazebo: 20000
+            }
+        };
+    });
+
+    useEffect(() => {
+        const handleStorageChange = () => {
+            const saved = localStorage.getItem('waterboom_prices');
+            if (saved) {
+                setPRICES(JSON.parse(saved));
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('focus', handleStorageChange);
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('focus', handleStorageChange);
+        };
+    }, []);
 
     // Calculate subtotal and grand total
     const ticketPrice = PRICES.tickets[selectedTicket];
@@ -110,17 +140,19 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
         };
 
         // Add to history
-        setHistoryList(prev => [
-            {
-                code: bookingCode,
-                date: today.split(',')[0],
-                type: newTicket.type,
-                qty: ticketQty,
-                total: grandTotal,
-                status: 'Aktif'
-            },
-            ...prev
-        ]);
+        const updatedItem = {
+            code: bookingCode,
+            date: today.split(',')[0],
+            type: newTicket.type,
+            qty: ticketQty,
+            total: grandTotal,
+            status: 'Lunas',
+            details: newTicket
+        };
+
+        const updatedList = [updatedItem, ...historyList];
+        setHistoryList(updatedList);
+        localStorage.setItem('waterboom_sales_history', JSON.stringify(updatedList));
 
         if (isCashierMode) {
             setReceiptData(newTicket);
@@ -527,6 +559,20 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                                 <span>Pusat Bantuan & FAQ</span>
                                 <i className="fa-solid fa-chevron-right arrow-right"></i>
                             </div>
+                            {isCashierMode && (
+                                <div 
+                                    className="profile-option-item" 
+                                    onClick={() => {
+                                        localStorage.removeItem('staffSession');
+                                        window.location.reload();
+                                    }}
+                                    style={{ color: '#d93838' }}
+                                >
+                                    <i className="fa-solid fa-arrow-right-from-bracket" style={{ color: '#d93838' }}></i>
+                                    <span>Keluar / Log Out</span>
+                                    <i className="fa-solid fa-chevron-right arrow-right"></i>
+                                </div>
+                            )}
                         </div>
 
                         {/* App Version Info */}

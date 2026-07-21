@@ -11,7 +11,7 @@ export default function Features() {
                 <div className="feature-text">
                     <h3 className="feature-title">WATER SLIDES</h3>
                     <div className="feature-title-underline"></div>
-                    <p className="feature-desc">Beragam seluncuran air seru dan aman untuk anak-anak maupun dewasa.</p>
+                    <p className="feature-desc">Seluncuran air seru dan aman untuk anak dan dewasa.</p>
                 </div>
             </div>
 
@@ -23,7 +23,7 @@ export default function Features() {
                 <div className="feature-text">
                     <h3 className="feature-title">SWIMMING POOLS</h3>
                     <div className="feature-title-underline"></div>
-                    <p className="feature-desc">Kolam renang yang bersih, segar, dan nyaman untuk seluruh keluarga.</p>
+                    <p className="feature-desc">Kolam renang bersih, segar, dan aman bagi keluarga.</p>
                 </div>
             </div>
 
@@ -35,7 +35,7 @@ export default function Features() {
                 <div className="feature-text">
                     <h3 className="feature-title">KIDS WATERPLAY</h3>
                     <div className="feature-title-underline"></div>
-                    <p className="feature-desc">Area bermain air interaktif yang aman dan menyenangkan khusus untuk anak.</p>
+                    <p className="feature-desc">Wahana bermain air interaktif yang aman bagi anak.</p>
                 </div>
             </div>
 
@@ -47,7 +47,7 @@ export default function Features() {
                 <div className="feature-text">
                     <h3 className="feature-title">GAZEBO & REST AREA</h3>
                     <div className="feature-title-underline"></div>
-                    <p className="feature-desc">Area gazebo yang nyaman untuk beristirahat sambil menikmati suasana tropis.</p>
+                    <p className="feature-desc">Gazebo nyaman untuk santai menikmati suasana alam tropis.</p>
                 </div>
             </div>
         </div>

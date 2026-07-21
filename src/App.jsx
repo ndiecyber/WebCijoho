@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -15,7 +15,27 @@ import BeritaPage from './pages/BeritaPage';
 import FasilitasPage from './pages/FasilitasPage';
 import TentangKamiPage from './pages/TentangKamiPage';
 import KontakPage from './pages/KontakPage';
+import LoginPage from './pages/LoginPage';
+import AdminDashboard from './pages/AdminDashboard';
 import MobileAppView from './components/MobileAppView';
+
+// Route Guard Component
+function ProtectedRoute({ children, allowedRoles }) {
+  const session = JSON.parse(localStorage.getItem('staffSession'));
+  
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (allowedRoles && !allowedRoles.includes(session.role)) {
+    if (session.role === 'kasir') {
+      return <Navigate to="/kasir" replace />;
+    }
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
+}
 
 function AppContent() {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -49,14 +69,14 @@ function AppContent() {
     setIsSuccessOpen(false);
   };
 
-  const isKasir = location.pathname === '/kasir';
+  const isStaffRoute = ['/kasir', '/login', '/admin'].includes(location.pathname);
 
   return (
     <>
       <ScrollToTop />
-      {!isKasir && <Header onOpenBooking={handleOpenBooking} />}
+      {!isStaffRoute && <Header onOpenBooking={handleOpenBooking} />}
       
-      <main className={isKasir ? 'kasir-main' : ''}>
+      <main className={isStaffRoute ? 'staff-main-layout' : ''}>
         <Routes>
           <Route path="/" element={<Home onOpenBooking={handleOpenBooking} />} />
           <Route path="/wahana" element={<WahanaPage />} />
@@ -65,11 +85,27 @@ function AppContent() {
           <Route path="/fasilitas" element={<FasilitasPage />} />
           <Route path="/tentang-kami" element={<TentangKamiPage />} />
           <Route path="/kontak" element={<KontakPage />} />
-          <Route path="/kasir" element={<MobileAppView isCashierMode={true} onOpenBooking={handleOpenBooking} />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route 
+            path="/kasir" 
+            element={
+              <ProtectedRoute allowedRoles={['kasir', 'admin']}>
+                <MobileAppView isCashierMode={true} onOpenBooking={handleOpenBooking} />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
       </main>
 
-      {!isKasir && <Footer onOpenBooking={handleOpenBooking} />}
+      {!isStaffRoute && <Footer onOpenBooking={handleOpenBooking} />}
 
       {/* Booking Form Overlay */}
       <BookingModal 
