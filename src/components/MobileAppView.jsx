@@ -396,7 +396,7 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                 {activeTab === 'beranda' && (
                     <div className="app-tab-pane fade-in">
                         {/* Smooth Horizontal Slide Banner Carousel */}
-                        <div className="hero-slider-track-container" style={{ overflow: 'hidden', borderRadius: '18px', position: 'relative', margin: '0 16px' }}>
+                        <div className="hero-slider-track-container" style={{ overflow: 'hidden', borderRadius: '18px', position: 'relative', margin: '12px 16px 0 16px', boxShadow: '0 8px 25px rgba(12, 41, 74, 0.08)' }}>
                             <div
                                 className="hero-slider-track"
                                 style={{
@@ -411,26 +411,28 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                                         key={idx}
                                         className="hero-slide-item"
                                         style={{
+                                            width: '100%',
                                             minWidth: '100%',
+                                            maxWidth: '100%',
                                             flex: '0 0 100%',
-                                            height: '185px',
-                                            backgroundImage: `linear-gradient(to top, rgba(12, 41, 74, 0.88), rgba(12, 41, 74, 0.35)), url('${slide.img}')`,
+                                            boxSizing: 'border-box',
+                                            height: '190px',
+                                            backgroundImage: `linear-gradient(to top, rgba(12, 41, 74, 0.92) 0%, rgba(12, 41, 74, 0.4) 60%, transparent 100%), url('${slide.img}')`,
                                             backgroundSize: 'cover',
                                             backgroundPosition: 'center',
                                             borderRadius: '18px',
-                                            padding: '20px',
+                                            padding: '20px 18px',
                                             display: 'flex',
                                             flexDirection: 'column',
                                             justifyContent: 'flex-end',
                                             color: 'white',
-                                            boxSizing: 'border-box',
                                             position: 'relative'
                                         }}
                                     >
-                                        <h3 style={{ fontSize: '1.25rem', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.6)', margin: 0 }}>{slide.title}</h3>
-                                        <p style={{ fontSize: '0.85rem', opacity: 0.9, marginTop: '4px', textShadow: '0 1px 3px rgba(0,0,0,0.6)', margin: 0 }}>{slide.subtitle}</p>
+                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.7)', margin: 0, lineHeight: 1.25 }}>{slide.title}</h3>
+                                        <p style={{ fontSize: '0.82rem', opacity: 0.95, marginTop: '4px', textShadow: '0 1px 3px rgba(0,0,0,0.7)', margin: 0, fontWeight: 500 }}>{slide.subtitle}</p>
 
-                                        <div className="slider-wave-decor" style={{ margin: '6px 0 24px 0', opacity: 0.85 }}>
+                                        <div className="slider-wave-decor" style={{ margin: '6px 0 18px 0', opacity: 0.85 }}>
                                             <svg width="42" height="6" viewBox="0 0 42 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M0 3 C 5 0, 5 6, 10 3 C 15 0, 15 6, 20 3 C 25 0, 25 6, 30 3 C 35 0, 35 6, 40 3" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" />
                                             </svg>
@@ -450,7 +452,7 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                                             width: currentSlide === idx ? '22px' : '8px',
                                             height: '8px',
                                             borderRadius: '4px',
-                                            backgroundColor: currentSlide === idx ? '#2563eb' : 'rgba(255,255,255,0.6)',
+                                            backgroundColor: currentSlide === idx ? '#2563eb' : 'rgba(255,255,255,0.7)',
                                             cursor: 'pointer',
                                             transition: 'all 0.3s ease'
                                         }}
@@ -508,23 +510,23 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                                 </div>
                             </div>
                         ) : (
-                            <div style={{ padding: '0 16px', marginTop: '14px' }}>
+                            <div style={{ padding: '0 16px', marginTop: '16px' }}>
                                 <div style={{
                                     backgroundColor: '#f0fdf4',
                                     border: '1.5px solid #86efac',
-                                    borderRadius: '14px',
-                                    padding: '12px 16px',
+                                    borderRadius: '16px',
+                                    padding: '14px 18px',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '12px',
-                                    boxShadow: '0 2px 8px rgba(37, 211, 102, 0.1)'
+                                    gap: '14px',
+                                    boxShadow: '0 4px 15px rgba(37, 211, 102, 0.1)'
                                 }}>
-                                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#25D366', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                                    <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#25D366', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0, boxShadow: '0 3px 10px rgba(37, 211, 102, 0.3)' }}>
                                         <i className="fa-brands fa-whatsapp"></i>
                                     </div>
                                     <div>
-                                        <h5 style={{ margin: 0, color: '#166534', fontSize: '0.92rem', fontWeight: 900 }}>PEMESANAN TIKET ONLINE WA</h5>
-                                        <small style={{ color: '#15803d', fontSize: '0.78rem', fontWeight: 600 }}>Tiket PDF resmi langsung dikirim ke WhatsApp Anda via Admin</small>
+                                        <h5 style={{ margin: 0, color: '#166534', fontSize: '0.95rem', fontWeight: 900, letterSpacing: '0.3px' }}>PEMESANAN TIKET ONLINE WA</h5>
+                                        <small style={{ color: '#15803d', fontSize: '0.8rem', fontWeight: 600, display: 'block', marginTop: '2px', lineHeight: 1.3 }}>Tiket PDF resmi langsung dikirim ke WhatsApp Anda via Admin</small>
                                     </div>
                                 </div>
                             </div>
