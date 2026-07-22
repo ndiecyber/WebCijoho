@@ -395,33 +395,33 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                 {/* 1. BERANDA / BOOKING TAB */}
                 {activeTab === 'beranda' && (
                     <div className="app-tab-pane fade-in" style={{ paddingTop: 0, marginTop: 0 }}>
-                        {/* Locked Banner Card (Zero Scroll / Permanently Locked in Place) */}
-                        <div 
-                            className="hero-slider-track-container" 
-                            style={{ 
-                                overflow: 'hidden', 
-                                borderRadius: '16px', 
-                                position: 'relative', 
-                                margin: '0', 
-                                boxShadow: '0 6px 20px rgba(12, 41, 74, 0.08)',
+                        {/* Locked Banner Card (High Contrast White Text) */}
+                        <div
+                            className="hero-slider-track-container"
+                            style={{
+                                overflow: 'hidden',
+                                borderRadius: '16px',
+                                position: 'relative',
+                                margin: '0',
+                                boxShadow: '0 6px 20px rgba(12, 41, 74, 0.12)',
                                 height: '140px',
-                                backgroundImage: `linear-gradient(to top, rgba(12, 41, 74, 0.92) 0%, rgba(12, 41, 74, 0.35) 60%, transparent 100%), url('${sliderSlides[currentSlide].img}')`,
+                                backgroundImage: `linear-gradient(to top, rgba(10, 25, 47, 0.95) 0%, rgba(10, 25, 47, 0.55) 65%, rgba(10, 25, 47, 0.2) 100%), url('${sliderSlides[currentSlide].img}')`,
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center',
                                 padding: '14px 16px',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 justifyContent: 'flex-end',
-                                color: 'white',
+                                color: '#ffffff',
                                 boxSizing: 'border-box'
                             }}
                         >
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.7)', margin: 0, lineHeight: 1.2 }}>{sliderSlides[currentSlide].title}</h3>
-                            <p style={{ fontSize: '0.78rem', opacity: 0.95, marginTop: '2px', textShadow: '0 1px 3px rgba(0,0,0,0.7)', margin: 0, fontWeight: 500 }}>{sliderSlides[currentSlide].subtitle}</p>
+                            <h3 style={{ color: '#ffffff', fontSize: '1.18rem', fontWeight: 900, textShadow: '0 2px 8px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.9)', margin: 0, lineHeight: 1.2, letterSpacing: '0.3px' }}>{sliderSlides[currentSlide].title}</h3>
+                            <p style={{ color: 'rgba(255, 255, 255, 0.95)', fontSize: '0.8rem', marginTop: '4px', textShadow: '0 1px 4px rgba(0, 0, 0, 0.9)', margin: 0, fontWeight: 600 }}>{sliderSlides[currentSlide].subtitle}</p>
 
-                            <div className="slider-wave-decor" style={{ margin: '4px 0 0 0', opacity: 0.85 }}>
+                            <div className="slider-wave-decor" style={{ margin: '6px 0 0 0', opacity: 0.9 }}>
                                 <svg width="36" height="5" viewBox="0 0 42 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M0 3 C 5 0, 5 6, 10 3 C 15 0, 15 6, 20 3 C 25 0, 25 6, 30 3 C 35 0, 35 6, 40 3" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                                    <path d="M0 3 C 5 0, 5 6, 10 3 C 15 0, 15 6, 20 3 C 25 0, 25 6, 30 3 C 35 0, 35 6, 40 3" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" fill="none" />
                                 </svg>
                             </div>
                         </div>
