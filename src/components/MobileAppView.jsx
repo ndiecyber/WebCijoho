@@ -311,32 +311,34 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
 
     return (
         <div className="mobile-app-wrapper">
-            {/* Top App Header */}
-            <header className="mobile-app-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <button className="header-icon-btn menu-toggle" onClick={() => setShowSidebar(!showSidebar)} style={{ fontSize: '1.4rem', border: 'none', background: 'none' }}>
-                        <i className="fa-solid fa-bars"></i>
-                    </button>
-                    <div className="header-logo-container" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <img src="assets/logo.png" alt="Waterboom Logo" className="app-logo-img" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
-                        <div className="app-logo-text" style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.05' }}>
-                            <span className="app-title" style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f2942', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                                {isCashierMode ? 'KASIR - WATERBOOM' : 'WATERBOOM'}
-                            </span>
-                            <span className="app-subtitle" style={{ fontSize: '0.92rem', fontWeight: 800, color: '#2563eb', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                                CIJOHO INDAH
-                            </span>
+            {/* Top App Header (Hanya Tampil di Mode Kasir, Disembunyikan untuk Pemesanan Tiket Online) */}
+            {isCashierMode && (
+                <header className="mobile-app-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <button className="header-icon-btn menu-toggle" onClick={() => setShowSidebar(!showSidebar)} style={{ fontSize: '1.4rem', border: 'none', background: 'none' }}>
+                            <i className="fa-solid fa-bars"></i>
+                        </button>
+                        <div className="header-logo-container" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <img src="assets/logo.png" alt="Waterboom Logo" className="app-logo-img" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
+                            <div className="app-logo-text" style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.05' }}>
+                                <span className="app-title" style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f2942', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                                    KASIR - WATERBOOM
+                                </span>
+                                <span className="app-subtitle" style={{ fontSize: '0.92rem', fontWeight: 800, color: '#2563eb', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+                                    CIJOHO INDAH
+                                </span>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <button className="header-icon-btn notif-bell" onClick={() => setShowNotif(!showNotif)}>
-                        <i className="fa-regular fa-bell"></i>
-                        <span className="bell-badge"></span>
-                    </button>
-                </div>
-            </header>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <button className="header-icon-btn notif-bell" onClick={() => setShowNotif(!showNotif)}>
+                            <i className="fa-regular fa-bell"></i>
+                            <span className="bell-badge"></span>
+                        </button>
+                    </div>
+                </header>
+            )}
 
             {/* Mobile Drawer Menu */}
             {showSidebar && (
