@@ -46,14 +46,33 @@ export default function Header({ onOpenBooking }) {
         <>
             <header className={`navbar-header ${isScrolled ? 'scrolled' : ''}`}>
                 <div className="container navbar-container">
-                    {/* Hamburger Button (Tampil di Layar Mobile & Tablet <= 992px) */}
+                    {/* 3-Dots Menu Button (Tampil di Layar Mobile & Tablet <= 992px) */}
                     <button
-                        className="mobile-hamburger-btn"
+                        className="three-dots-menu-btn"
                         aria-label="Buka Menu Navigasi"
                         onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+                        style={{
+                            width: '32px',
+                            height: '32px',
+                            minWidth: '32px',
+                            minHeight: '32px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            backgroundColor: isMobileNavOpen ? '#e2e8f0' : '#f8fafc',
+                            color: '#0f2942',
+                            fontSize: '0.95rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            marginRight: '14px',
+                            flexShrink: 0,
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+                            transition: 'all 0.2s ease'
+                        }}
                         title="Menu Navigasi Mobile"
                     >
-                        <i className={isMobileNavOpen ? "fa-solid fa-xmark" : "fa-solid fa-bars"}></i>
+                        <i className={isMobileNavOpen ? "fa-solid fa-xmark" : "fa-solid fa-ellipsis-vertical"}></i>
                     </button>
 
                     {/* Logo & Brand */}
