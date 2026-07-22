@@ -52,15 +52,15 @@ export default function Header({ onOpenBooking }) {
                         aria-label="Buka Menu Navigasi"
                         onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
                         style={{
-                            width: '32px',
-                            height: '32px',
-                            minWidth: '32px',
-                            minHeight: '32px',
-                            borderRadius: '8px',
+                            width: '36px',
+                            height: '36px',
+                            minWidth: '36px',
+                            minHeight: '36px',
+                            borderRadius: '10px',
                             border: '1px solid #cbd5e1',
                             backgroundColor: isMobileNavOpen ? '#e2e8f0' : '#f8fafc',
                             color: '#0f2942',
-                            fontSize: '0.95rem',
+                            fontSize: '1rem',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',

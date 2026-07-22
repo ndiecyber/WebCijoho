@@ -391,12 +391,12 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
             )}
 
             {/* Core Tab Content Container */}
-            <div className="mobile-app-content">
+            <div className="mobile-app-content" style={{ paddingTop: isCashierMode ? '74px' : '6px', paddingLeft: '12px', paddingRight: '12px' }}>
                 {/* 1. BERANDA / BOOKING TAB */}
                 {activeTab === 'beranda' && (
                     <div className="app-tab-pane fade-in">
                         {/* Smooth Horizontal Slide Banner Carousel */}
-                        <div className="hero-slider-track-container" style={{ overflow: 'hidden', borderRadius: '18px', position: 'relative', margin: '12px 16px 0 16px', boxShadow: '0 8px 25px rgba(12, 41, 74, 0.08)' }}>
+                        <div className="hero-slider-track-container" style={{ overflow: 'hidden', borderRadius: '18px', position: 'relative', margin: '4px 0 0 0', boxShadow: '0 8px 25px rgba(12, 41, 74, 0.08)' }}>
                             <div
                                 className="hero-slider-track"
                                 style={{
