@@ -196,9 +196,6 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
         <div className="mobile-app-wrapper">
             {/* Top App Header */}
             <header className="mobile-app-header">
-                <button className="header-icon-btn" onClick={() => setShowSidebar(true)}>
-                    <i className="fa-solid fa-bars"></i>
-                </button>
                 <div className="header-logo-container">
                     <img src="assets/logo.png" alt="Waterboom Logo" className="app-logo-img" />
                     <div className="app-logo-text">
@@ -243,32 +240,7 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                 </div>
             )}
 
-            {/* Left Sidebar Menu */}
-            {showSidebar && (
-                <div className="sidebar-backdrop" onClick={() => setShowSidebar(false)}>
-                    <div className="sidebar-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="sidebar-header">
-                            <div className="header-logo-container">
-                                <img src="assets/logo.png" alt="Waterboom Logo" className="app-logo-img" />
-                                <div className="app-logo-text">
-                                    <span className="app-title">WATERBOOM</span>
-                                    <span className="app-subtitle">CIJOHO INDAH</span>
-                                </div>
-                            </div>
-                            <button className="sidebar-close" onClick={() => setShowSidebar(false)}>&times;</button>
-                        </div>
-                        <ul className="sidebar-menu-links">
-                            <li><Link to="/" onClick={() => setShowSidebar(false)}><i className="fa-solid fa-house"></i> Beranda Utama</Link></li>
-                            <li><Link to="/wahana" onClick={() => setShowSidebar(false)}><i className="fa-solid fa-water"></i> Daftar Wahana</Link></li>
-                            <li><Link to="/galeri" onClick={() => setShowSidebar(false)}><i className="fa-solid fa-images"></i> Galeri Foto</Link></li>
-                            <li><Link to="/berita" onClick={() => setShowSidebar(false)}><i className="fa-solid fa-newspaper"></i> Berita & Promo</Link></li>
-                            <li><Link to="/fasilitas" onClick={() => setShowSidebar(false)}><i className="fa-solid fa-toilet-portable"></i> Fasilitas</Link></li>
-                            <li><Link to="/tentang-kami" onClick={() => setShowSidebar(false)}><i className="fa-solid fa-circle-info"></i> Tentang Kami</Link></li>
-                            <li><Link to="/kontak" onClick={() => setShowSidebar(false)}><i className="fa-solid fa-envelope"></i> Hubungi Kami</Link></li>
-                        </ul>
-                    </div>
-                </div>
-            )}
+
 
             {/* Core Tab Content Container */}
             <div className="mobile-app-content">
