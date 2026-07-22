@@ -475,12 +475,12 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                                 </div>
                             </div>
                         ) : (
-                            <div style={{ padding: '0 4px', marginTop: '10px' }}>
+                            <div style={{ padding: '0 4px', marginTop: '12px', marginBottom: '18px' }}>
                                 <div style={{
                                     backgroundColor: '#f0fdf4',
                                     border: '1.5px solid #86efac',
                                     borderRadius: '14px',
-                                    padding: '10px 14px',
+                                    padding: '12px 16px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '12px',
@@ -498,8 +498,8 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                         )}
 
                         {/* Ticket Selector Section */}
-                        <div className="app-section">
-                            <h4 className="section-title"><i className="fa-solid fa-tag text-blue"></i> PILIH JENIS TIKET</h4>
+                        <div className="app-section" style={{ marginTop: '22px' }}>
+                            <h4 className="section-title" style={{ marginTop: 0, marginBottom: '14px' }}><i className="fa-solid fa-tag text-blue"></i> PILIH JENIS TIKET</h4>
                             <div className="ticket-cards-scroll">
                                 <div
                                     className={`app-ticket-card reguler ${selectedTicket === 'reguler' ? 'active' : ''}`}
