@@ -1190,7 +1190,7 @@ export default function AdminDashboard() {
 
                     {/* TAB: PENGELUARAN */}
                     {activeTab === 'pengeluaran' && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '20px' }}>
+                        <div className="tab-content-grid-120" style={{ display: 'grid', gridTemplateColumns: '1fr 1.8fr', gap: '24px' }}>
                             {/* Form tambah pengeluaran */}
                             <div className="chart-card-box">
                                 <h3>Catat Pengeluaran Baru</h3>
