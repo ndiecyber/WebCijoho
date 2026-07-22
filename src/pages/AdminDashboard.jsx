@@ -35,6 +35,7 @@ export default function AdminDashboard() {
     const [dateRange, setDateRange] = useState('15 Mei 2025 - 21 Mei 2025');
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
     const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+    const [selectedPDFTicket, setSelectedPDFTicket] = useState(null);
 
     // Account Switcher State (Instagram Style)
     const [accounts, setAccounts] = useState([
@@ -1700,18 +1701,67 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* TAB: PENGUNJUNG */}
+                    {/* TAB: PENGUNJUNG / TRANSAKSI LANGSUNG */}
                     {activeTab === 'pengunjung' && (
                         <div className="data-table-card">
-                            <h3>Database Pengunjung</h3>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                <div>
+                                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0c294a' }}>Pesanan & Tiket Pengunjung (Tanpa Akun)</h3>
+                                    <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Daftar pesanan tiket pengunjung langsung. Admin dapat mencetak Tiket PDF & mengirimkan via WhatsApp.</p>
+                                </div>
+                            </div>
+
                             <div className="superadmin-table-wrapper" style={{ marginTop: '15px' }}>
-                                <table className="superadmin-table">
+                                <table className="superadmin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
-                                        <tr><th>ID</th><th>Nama</th><th>Jumlah Kunjungan</th><th>Status Loyalitas</th></tr>
+                                        <tr style={{ backgroundColor: '#f8fafc', textTransform: 'uppercase', fontSize: '0.75rem', color: '#64748b' }}>
+                                            <th style={{ padding: '12px' }}>No. Booking</th>
+                                            <th style={{ padding: '12px' }}>Tanggal</th>
+                                            <th style={{ padding: '12px' }}>Pemesan</th>
+                                            <th style={{ padding: '12px' }}>No. WA</th>
+                                            <th style={{ padding: '12px' }}>Item Tiket & Sewa</th>
+                                            <th style={{ padding: '12px' }}>Total Tagihan</th>
+                                            <th style={{ padding: '12px' }}>Status PDF</th>
+                                            <th style={{ padding: '12px' }}>Aksi Admin</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
-                                        <tr><td className="font-bold">USR-382</td><td>Agus Budiman</td><td>12 Kunjungan</td><td><span className="badge-lunas">VIP Member</span></td></tr>
-                                        <tr><td className="font-bold">USR-291</td><td>Siti Rahmawati</td><td>5 Kunjungan</td><td><span className="badge-lunas" style={{ backgroundColor: '#eff6ff', color: '#1a73e8' }}>Regular</span></td></tr>
+                                        {(JSON.parse(localStorage.getItem('waterboom_sales_history')) || [
+                                            { code: 'WCI-823902', date: '22 Juli 2026', name: 'Budi Santoso', phone: '081234567890', type: 'Tiket Reguler', qty: 2, total: 65000, status: 'Menunggu PDF' }
+                                        ]).map((t, i) => (
+                                            <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                <td className="font-bold" style={{ color: '#1a73e8' }}>{t.code}</td>
+                                                <td>{t.date}</td>
+                                                <td><strong>{t.name || 'Pengunjung'}</strong></td>
+                                                <td>{t.phone || '-'}</td>
+                                                <td>{t.type} ({t.qty}x)</td>
+                                                <td><strong>Rp {t.total?.toLocaleString('id-ID')}</strong></td>
+                                                <td>
+                                                    <span style={{ backgroundColor: '#eff6ff', color: '#1a73e8', padding: '4px 10px', borderRadius: '50px', fontSize: '0.72rem', fontWeight: 800 }}>
+                                                        {t.status || 'Aktif'}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                                        <button 
+                                                            onClick={() => setSelectedPDFTicket(t)} 
+                                                            style={{ backgroundColor: '#0c294a', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                        >
+                                                            <i className="fa-solid fa-file-pdf"></i> Cetak PDF
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => {
+                                                                const waText = `Halo kak ${t.name || ''}, berikut Tiket Resmi PDF Waterboom Cijoho Indah untuk Kode Booking: *${t.code}*.\n\nTanggal: ${t.date}\nTotal: Rp ${t.total?.toLocaleString('id-ID')}\n\nE-Tiket PDF siap digunakan di pintu masuk. Terima kasih!`;
+                                                                window.open(`https://wa.me/${(t.phone || '6281234567890').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waText)}`, '_blank');
+                                                            }}
+                                                            style={{ backgroundColor: '#25D366', color: 'white', border: 'none', padding: '6px 10px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                        >
+                                                            <i className="fa-brands fa-whatsapp"></i> WA PDF
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -1877,6 +1927,92 @@ export default function AdminDashboard() {
                     )}
                 </div>
             </main>
+
+            {/* MODAL CETAK TIKET PDF RESMI FOR ADMIN */}
+            {selectedPDFTicket && (
+                <div className="v-modal-backdrop" onClick={() => setSelectedPDFTicket(null)}>
+                    <div className="v-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '540px', backgroundColor: 'white' }}>
+                        <div className="v-modal-head" style={{ backgroundColor: '#0c294a', color: 'white' }}>
+                            <h4 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <i className="fa-solid fa-file-pdf"></i> E-Tiket Resmi Waterboom (PDF)
+                            </h4>
+                            <button onClick={() => setSelectedPDFTicket(null)} style={{ color: 'white' }}>&times;</button>
+                        </div>
+
+                        <div className="v-modal-body" style={{ padding: '24px', backgroundColor: '#fff' }}>
+                            <div id="pdf-printable-area" style={{ border: '2px solid #0c294a', borderRadius: '16px', padding: '20px', backgroundColor: '#f8fafc' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0c294a', paddingBottom: '12px', marginBottom: '16px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <img src="assets/logo.png" alt="Logo" style={{ height: '42px' }} />
+                                        <div>
+                                            <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0c294a', margin: 0 }}>WATERBOOM CIJOHO INDAH</h3>
+                                            <small style={{ color: '#1a73e8', fontWeight: 700 }}>E-TICKET RESMI PENGUNJUNG</small>
+                                        </div>
+                                    </div>
+                                    <span style={{ backgroundColor: '#d1fae5', color: '#047857', fontSize: '0.72rem', fontWeight: 900, padding: '4px 10px', borderRadius: '50px', border: '1px solid #6ee7b7' }}>
+                                        VALIDATED / LUNAS
+                                    </span>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.85rem', marginBottom: '16px' }}>
+                                    <div>
+                                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>KODE BOOKING</span>
+                                        <strong style={{ fontSize: '1.1rem', color: '#1a73e8' }}>{selectedPDFTicket.code}</strong>
+                                    </div>
+                                    <div>
+                                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>TANGGAL KUNJUNGAN</span>
+                                        <strong>{selectedPDFTicket.date}</strong>
+                                    </div>
+                                    <div>
+                                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>NAMA PEMESAN</span>
+                                        <strong>{selectedPDFTicket.name || 'Pengunjung'}</strong>
+                                    </div>
+                                    <div>
+                                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>NO. WHATSAPP</span>
+                                        <strong>{selectedPDFTicket.phone || '-'}</strong>
+                                    </div>
+                                </div>
+
+                                <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '10px', marginBottom: '16px' }}>
+                                    <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', marginBottom: '6px' }}>RINCIAN ITEM & TOTAL:</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                        <span>{selectedPDFTicket.type} ({selectedPDFTicket.qty || 1}x)</span>
+                                        <strong>Rp {selectedPDFTicket.total?.toLocaleString('id-ID')}</strong>
+                                    </div>
+                                </div>
+
+                                <div style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '4.5rem', color: '#0c294a', lineHeight: 1 }}>
+                                        <i className="fa-solid fa-qrcode"></i>
+                                    </div>
+                                    <div style={{ letterSpacing: '3px', fontWeight: 900, color: '#475569', fontSize: '0.9rem', marginTop: '6px' }}>
+                                        {selectedPDFTicket.code}
+                                    </div>
+                                    <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Tunjukkan barcode/QR code ini ke loket pintu masuk</small>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                                <button 
+                                    onClick={() => window.print()}
+                                    style={{ flex: 1, backgroundColor: '#1a73e8', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                    <i className="fa-solid fa-print"></i> Cetak / Simpan Ke PDF
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        const waText = `Halo kak ${selectedPDFTicket.name || ''}, berikut Tiket Resmi PDF Waterboom Cijoho Indah untuk Kode Booking: *${selectedPDFTicket.code}*.\n\nTanggal: ${selectedPDFTicket.date}\nTotal: Rp ${selectedPDFTicket.total?.toLocaleString('id-ID')}\n\nE-Tiket PDF siap digunakan di pintu masuk. Terima kasih!`;
+                                        window.open(`https://wa.me/${(selectedPDFTicket.phone || '6281234567890').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waText)}`, '_blank');
+                                    }}
+                                    style={{ flex: 1, backgroundColor: '#25D366', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                    <i className="fa-brands fa-whatsapp"></i> Kirim WA Ke Pemesan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Account Switch Toast Notification */}
             {switchToast && (

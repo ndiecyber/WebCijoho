@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 export default function MobileAppView({ onOpenBooking, isCashierMode = false }) {
     const [activeTab, setActiveTab] = useState('beranda');
     const location = useLocation();
+    const navigate = useNavigate();
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -12,36 +13,101 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
             setActiveTab(tab);
         }
     }, [location]);
+
     const [selectedTicket, setSelectedTicket] = useState('reguler');
-    const [ticketQty, setTicketQty] = useState(0);
-    const [sewaBan, setSewaBan] = useState(0);
+    const [ticketQty, setTicketQty] = useState(2);
+    const [sewaBan, setSewaBan] = useState(1);
     const [sewaSepeda, setSewaSepeda] = useState(0);
-    const [sewaGazebo, setSewaGazebo] = useState(0);
+    const [sewaGazebo, setSewaGazebo] = useState(1);
     const [showSidebar, setShowSidebar] = useState(false);
     const [showNotif, setShowNotif] = useState(false);
     const [showReceipt, setShowReceipt] = useState(false);
     const [receiptData, setReceiptData] = useState(null);
+
+    // Direct WhatsApp Checkout Modal states (No account required)
+    const [showWACheckoutModal, setShowWACheckoutModal] = useState(false);
+    const [buyerName, setBuyerName] = useState('Pengunjung Cijoho');
+    const [buyerPhone, setBuyerPhone] = useState('081234567890');
+    const [visitDate, setVisitDate] = useState(() => {
+        return new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    });
+
+    // Mode Pembelian: 'offline' (Loket Fisik Direct Struk) vs 'online' (WhatsApp PDF Admin)
+    const [posMode, setPosMode] = useState(isCashierMode ? 'offline' : 'online');
+    const [showOfflinePOSModal, setShowOfflinePOSModal] = useState(false);
+    const [showOfflineReceiptModal, setShowOfflineReceiptModal] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState('cash');
+    const [offlineReceiptData, setOfflineReceiptData] = useState(null);
+
     const [cashReceived, setCashReceived] = useState('');
     const [cashChange, setCashChange] = useState(0);
 
+    const handleConfirmOfflinePOS = (e) => {
+        e.preventDefault();
+        const receiptCode = 'STR-' + Math.floor(100000 + Math.random() * 900000);
+        const typeName = selectedTicket === 'reguler' ? 'Tiket Reguler' : selectedTicket === 'rombongan' ? 'Tiket Rombongan' : 'Kursus Renang';
+        const paidAmount = paymentMethod === 'cash' ? (parseInt(cashReceived) || grandTotal) : grandTotal;
+        const change = paidAmount - grandTotal;
+
+        const newReceipt = {
+            code: receiptCode,
+            date: visitDate,
+            time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+            cashierName: 'Petugas Kasir 1',
+            type: typeName,
+            qty: ticketQty,
+            ticketPrice: ticketPrice,
+            subtotal: subtotal,
+            rentals: { ban: sewaBan, sepeda: sewaSepeda, gazebo: sewaGazebo },
+            total: grandTotal,
+            paymentMethod: paymentMethod === 'cash' ? 'Tunai (Cash)' : 'QRIS / EDC',
+            paidAmount: paidAmount,
+            change: change >= 0 ? change : 0,
+            status: 'Lunas - Struk Loket Fisik'
+        };
+
+        const updatedHistory = [newReceipt, ...historyList];
+        setHistoryList(updatedHistory);
+        localStorage.setItem('waterboom_sales_history', JSON.stringify(updatedHistory));
+        setOfflineReceiptData(newReceipt);
+
+        setShowOfflinePOSModal(false);
+        setShowOfflineReceiptModal(true);
+    };
+
     // Purchase history & active tickets
-    const [activeTicketData, setActiveTicketData] = useState(null);
+    const [activeTicketData, setActiveTicketData] = useState({
+        code: 'WCI-823902',
+        date: '22 Juli 2026',
+        name: 'Pengunjung Cijoho',
+        phone: '081234567890',
+        type: 'Tiket Reguler',
+        ticketTypeKey: 'reguler',
+        qty: 2,
+        ticketPrice: 20000,
+        subtotal: 40000,
+        rentals: { ban: 1, sepeda: 0, gazebo: 1 },
+        total: 65000
+    });
+
     const [historyList, setHistoryList] = useState(() => {
         const saved = localStorage.getItem('waterboom_sales_history');
         if (saved) return JSON.parse(saved);
         return [
             {
                 code: 'WCI-823902',
-                date: '18 Juli 2026',
+                date: '22 Juli 2026',
+                name: 'Pengunjung Cijoho',
+                phone: '081234567890',
                 type: 'Tiket Reguler',
-                qty: 3,
+                qty: 2,
                 total: 65000,
-                status: 'Lunas',
+                status: 'Menunggu PDF WA Admin',
                 details: {
                     ticketTypeKey: 'reguler',
-                    qty: 3,
-                    subtotal: 60000,
-                    rentals: { ban: 1, sepeda: 0, gazebo: 0 },
+                    qty: 2,
+                    subtotal: 40000,
+                    rentals: { ban: 1, sepeda: 0, gazebo: 1 },
                     total: 65000
                 }
             }
@@ -49,19 +115,31 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
     });
 
     // Slider state for Hero Card
-    const sliderImages = [
-        'assets/dash.jpeg?v=1.1',
-        'assets/1.png?v=1.1',
-        'assets/bebek.png?v=1.1'
+    const sliderSlides = [
+        {
+            img: 'assets/dash.jpeg?v=1.1',
+            title: 'Selamat Datang!',
+            subtitle: 'Nikmati liburan seru di Waterboom Cijoho Indah'
+        },
+        {
+            img: 'assets/1.png?v=1.1',
+            title: 'Wahana Air & Kolam Renang',
+            subtitle: 'Seluncuran raksasa & saung gazebo keluarga'
+        },
+        {
+            img: 'assets/bebek.png?v=1.1',
+            title: 'Sewa Sepeda Air & Wahana Bebek',
+            subtitle: 'Pengalaman seru dan asyik untuk buah hati'
+        }
     ];
     const [currentSlide, setCurrentSlide] = useState(0);
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setCurrentSlide(prev => (prev + 1) % sliderImages.length);
-        }, 4000);
+            setCurrentSlide(prev => (prev + 1) % sliderSlides.length);
+        }, 3500);
         return () => clearInterval(interval);
-    }, []);
+    }, [sliderSlides.length]);
 
     // Price State synchronized with localStorage
     const [PRICES, setPRICES] = useState(() => {
@@ -97,186 +175,370 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
     }, []);
 
     // Calculate subtotal and grand total
-    const ticketPrice = PRICES.tickets[selectedTicket];
+    const ticketPrice = PRICES.tickets[selectedTicket] || 20000;
     const subtotal = ticketPrice * ticketQty;
     const rentalsTotal = (sewaBan * PRICES.rentals.ban) + (sewaSepeda * PRICES.rentals.sepeda) + (sewaGazebo * PRICES.rentals.gazebo);
     const grandTotal = subtotal + rentalsTotal;
 
-    // Handle Payment simulation
-    const handlePayment = () => {
+    // Trigger Payment / Checkout Modal (Offline vs Online)
+    const handlePaymentClick = () => {
         if (ticketQty <= 0) {
             alert('Silakan tentukan jumlah tiket terlebih dahulu!');
             return;
         }
 
+        if (posMode === 'offline') {
+            setCashReceived(grandTotal.toString());
+            setCashChange(0);
+            setShowOfflinePOSModal(true);
+        } else {
+            setShowWACheckoutModal(true);
+        }
+    };
+
+    // Cashier direct checkout
+    const processCashierPayment = () => {
         const bookingCode = 'WCI-' + Math.floor(100000 + Math.random() * 900000);
-        const today = new Date().toLocaleDateString('id-ID', { 
-            day: 'numeric', 
-            month: 'long', 
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        
+        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
         const newTicket = {
             code: bookingCode,
             date: today,
+            name: 'Pengunjung Kasir',
+            phone: '-',
             type: selectedTicket === 'reguler' ? 'Tiket Reguler' : selectedTicket === 'rombongan' ? 'Tiket Rombongan' : 'Kursus Renang',
             ticketTypeKey: selectedTicket,
             qty: ticketQty,
             ticketPrice: ticketPrice,
             subtotal: subtotal,
-            rentals: {
-                ban: sewaBan,
-                sepeda: sewaSepeda,
-                gazebo: sewaGazebo
-            },
-            rentalsPrice: {
-                ban: PRICES.rentals.ban,
-                sepeda: PRICES.rentals.sepeda,
-                gazebo: PRICES.rentals.gazebo
-            },
+            rentals: { ban: sewaBan, sepeda: sewaSepeda, gazebo: sewaGazebo },
+            rentalsPrice: { ban: PRICES.rentals.ban, sepeda: PRICES.rentals.sepeda, gazebo: PRICES.rentals.gazebo },
             total: grandTotal
         };
 
-        // Add to history
-        const updatedItem = {
+        const updatedList = [{
             code: bookingCode,
-            date: today.split(',')[0],
+            date: today,
             type: newTicket.type,
             qty: ticketQty,
             total: grandTotal,
             status: 'Lunas',
             details: newTicket
-        };
+        }, ...historyList];
 
-        const updatedList = [updatedItem, ...historyList];
         setHistoryList(updatedList);
         localStorage.setItem('waterboom_sales_history', JSON.stringify(updatedList));
 
-        if (isCashierMode) {
-            setReceiptData(newTicket);
-            setCashReceived('');
-            setCashChange(0);
-            setShowReceipt(true);
-        } else {
-            // Set as active ticket for visitor mode
-            setActiveTicketData(newTicket);
-            
-            // Reset inputs
-            setTicketQty(0);
-            setSewaBan(0);
-            setSewaSepeda(0);
-            setSewaGazebo(0);
-
-            // Redirect to "Tiket Saya" tab
-            setActiveTab('tiket');
-        }
-    };
-
-    const handleNewTransaction = () => {
-        // Reset inputs
-        setTicketQty(0);
-        setSewaBan(0);
-        setSewaSepeda(0);
-        setSewaGazebo(0);
-        
-        // Hide receipt modal
-        setShowReceipt(false);
-        setReceiptData(null);
+        setReceiptData(newTicket);
         setCashReceived('');
         setCashChange(0);
+        setShowReceipt(true);
     };
 
-    const handlePrintReceipt = () => {
-        alert("Mencetak Struk Penjualan...\nKode: " + receiptData.code);
+    // Confirm Order & Open WhatsApp Admin for PDF Ticket
+    const handleConfirmWhatsAppOrder = (e) => {
+        e.preventDefault();
+
+        if (!buyerName.trim()) {
+            alert('Silakan masukkan Nama Pemesan.');
+            return;
+        }
+
+        const bookingCode = 'WCI-' + Math.floor(100000 + Math.random() * 900000);
+        const typeName = selectedTicket === 'reguler' ? 'Tiket Reguler' : selectedTicket === 'rombongan' ? 'Tiket Rombongan' : 'Kursus Renang';
+
+        let rentalsTextArray = [];
+        if (sewaBan > 0) rentalsTextArray.push(`• ${sewaBan}x Sewa Ban (Rp ${(sewaBan * PRICES.rentals.ban).toLocaleString('id-ID')})`);
+        if (sewaSepeda > 0) rentalsTextArray.push(`• ${sewaSepeda}x Sewa Sepeda Air (Rp ${(sewaSepeda * PRICES.rentals.sepeda).toLocaleString('id-ID')})`);
+        if (sewaGazebo > 0) rentalsTextArray.push(`• ${sewaGazebo}x Sewa Gazebo (Rp ${(sewaGazebo * PRICES.rentals.gazebo).toLocaleString('id-ID')})`);
+        const rentalsFormatted = rentalsTextArray.length > 0 ? rentalsTextArray.join('\n') : '• Tidak ada tambahan sewa';
+
+        const waMessage =
+            `Halo Admin Waterboom Cijoho Indah! Saya telah membeli tiket secara langsung tanpa akun:
+
+*KODE BOOKING*: ${bookingCode}
+*Nama Pemesan*: ${buyerName}
+*No. WhatsApp*: ${buyerPhone}
+*Tanggal Kunjungan*: ${visitDate}
+
+*RINCIAN TIKET & SEWA*:
+• ${ticketQty}x ${typeName} (Rp ${subtotal.toLocaleString('id-ID')})
+${rentalsFormatted}
+
+*TOTAL TAGIHAN*: Rp ${grandTotal.toLocaleString('id-ID')}
+
+Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp ini. Terima kasih!`;
+
+        const newTicketObj = {
+            code: bookingCode,
+            date: visitDate,
+            name: buyerName,
+            phone: buyerPhone,
+            type: typeName,
+            ticketTypeKey: selectedTicket,
+            qty: ticketQty,
+            ticketPrice: ticketPrice,
+            subtotal: subtotal,
+            rentals: { ban: sewaBan, sepeda: sewaSepeda, gazebo: sewaGazebo },
+            rentalsPrice: { ban: PRICES.rentals.ban, sepeda: PRICES.rentals.sepeda, gazebo: PRICES.rentals.gazebo },
+            total: grandTotal
+        };
+
+        const updatedHistory = [{
+            code: bookingCode,
+            date: visitDate,
+            name: buyerName,
+            phone: buyerPhone,
+            type: typeName,
+            qty: ticketQty,
+            total: grandTotal,
+            status: 'Menunggu PDF WA Admin',
+            details: newTicketObj
+        }, ...historyList];
+
+        setHistoryList(updatedHistory);
+        localStorage.setItem('waterboom_sales_history', JSON.stringify(updatedHistory));
+        setActiveTicketData(newTicketObj);
+
+        // Open WhatsApp link with pre-filled text
+        const adminWaNumber = '6281234567890'; // Official Admin WhatsApp
+        const waUrl = `https://wa.me/${adminWaNumber}?text=${encodeURIComponent(waMessage)}`;
+        window.open(waUrl, '_blank');
+
+        setShowWACheckoutModal(false);
+        setActiveTab('tiket');
     };
 
     return (
         <div className="mobile-app-wrapper">
             {/* Top App Header */}
             <header className="mobile-app-header">
-                <div className="header-logo-container">
-                    <img src="assets/logo.png" alt="Waterboom Logo" className="app-logo-img" />
-                    <div className="app-logo-text">
-                        <span className="app-title">{isCashierMode ? 'KASIR - WATERBOOM' : 'WATERBOOM'}</span>
-                        <span className="app-subtitle" style={{ color: '#1a73e8' }}>CIJOHO INDAH</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button className="header-icon-btn menu-toggle" onClick={() => setShowSidebar(!showSidebar)} style={{ fontSize: '1.4rem', border: 'none', background: 'none' }}>
+                        <i className="fa-solid fa-bars"></i>
+                    </button>
+                    <div className="header-logo-container" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img src="assets/logo.png" alt="Waterboom Logo" className="app-logo-img" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
+                        <div className="app-logo-text" style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.05' }}>
+                            <span className="app-title" style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f2942', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                                {isCashierMode ? 'KASIR - WATERBOOM' : 'WATERBOOM'}
+                            </span>
+                            <span className="app-subtitle" style={{ fontSize: '0.92rem', fontWeight: 800, color: '#2563eb', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+                                CIJOHO INDAH
+                            </span>
+                        </div>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <button className="header-icon-btn notif-bell" onClick={() => setShowNotif(!showNotif)}>
                         <i className="fa-regular fa-bell"></i>
                         <span className="bell-badge"></span>
                     </button>
-                    <button className="header-avatar-btn" onClick={() => setActiveTab('profil')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #d0deef', background: 'none' }}>
-                        <i className="fa-regular fa-user" style={{ color: 'var(--color-primary)', fontSize: '1.1rem' }}></i>
-                    </button>
                 </div>
             </header>
 
-            {/* Notification Dropdown */}
-            {showNotif && (
-                <div className="notif-dropdown">
-                    <div className="notif-header">
-                        <h4>Notifikasi</h4>
-                        <button onClick={() => setShowNotif(false)}>&times;</button>
-                    </div>
-                    <div className="notif-list">
-                        <div className="notif-item unread">
-                            <i className="fa-solid fa-gift text-accent"></i>
-                            <div>
-                                <p><strong>Diskon Rombongan 25%</strong></p>
-                                <small>Nikmati potongan harga rombongan sekolah!</small>
+            {/* Mobile Drawer Menu */}
+            {showSidebar && (
+                <div className="mobile-drawer-overlay" onClick={() => setShowSidebar(false)}>
+                    <div className="mobile-drawer-pane" onClick={(e) => e.stopPropagation()}>
+                        <div className="drawer-head">
+                            <div className="header-logo-container" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <img src="assets/logo.png" alt="Logo" style={{ height: '38px', width: 'auto', objectFit: 'contain' }} />
+                                <div className="app-logo-text" style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.05' }}>
+                                    <span className="app-title" style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f2942', letterSpacing: '0.5px', textTransform: 'uppercase' }}>WATERBOOM</span>
+                                    <span className="app-subtitle" style={{ fontSize: '0.85rem', fontWeight: 800, color: '#2563eb', letterSpacing: '1.2px', textTransform: 'uppercase' }}>CIJOHO INDAH</span>
+                                </div>
                             </div>
+                            <button onClick={() => setShowSidebar(false)} style={{ fontSize: '1.5rem', background: 'none', border: 'none', cursor: 'pointer' }}>&times;</button>
                         </div>
-                        <div className="notif-item">
-                            <i className="fa-solid fa-circle-check text-green"></i>
-                            <div>
-                                <p><strong>Wahana Kids Waterplay Dibuka!</strong></p>
-                                <small>Nikmati keseruan ember tumpah terbaru.</small>
-                            </div>
+                        <div className="drawer-menu-list">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowSidebar(false);
+                                    if (window.history.length > 1) {
+                                        navigate(-1);
+                                    } else {
+                                        navigate('/');
+                                    }
+                                }}
+                                style={{
+                                    color: '#2563eb',
+                                    fontWeight: 800,
+                                    backgroundColor: '#eff6ff',
+                                    border: '1px solid #bfdbfe',
+                                    borderRadius: '12px',
+                                    marginBottom: '8px'
+                                }}
+                            >
+                                <i className="fa-solid fa-arrow-left" style={{ color: '#2563eb' }}></i> Kembali
+                            </button>
+                            <button onClick={() => { setActiveTab('beranda'); setShowSidebar(false); }} className={activeTab === 'beranda' ? 'active' : ''}>
+                                <i className="fa-solid fa-house"></i> Beranda Utama
+                            </button>
+                            <button onClick={() => { setActiveTab('tiket'); setShowSidebar(false); }} className={activeTab === 'tiket' ? 'active' : ''}>
+                                <i className="fa-solid fa-ticket"></i> Tiket Saya
+                            </button>
+                            <button onClick={() => { setActiveTab('riwayat'); setShowSidebar(false); }} className={activeTab === 'riwayat' ? 'active' : ''}>
+                                <i className="fa-solid fa-clock-rotate-left"></i> Riwayat Transaksi
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
-
-
 
             {/* Core Tab Content Container */}
             <div className="mobile-app-content">
                 {/* 1. BERANDA / BOOKING TAB */}
                 {activeTab === 'beranda' && (
                     <div className="app-tab-pane fade-in">
-                        {/* Slide Welcome Banner */}
-                        <div className="app-hero-slider" style={{ backgroundImage: `url('${sliderImages[currentSlide]}')` }}>
-                            <div className="slider-overlay">
-                                <h3>Selamat Datang!</h3>
-                                <p>Nikmati liburan seru di Waterboom Cijoho Indah</p>
-                                
-                                {/* Wavy separator decoration */}
-                                <div className="slider-wave-decor" style={{ margin: '8px 0', opacity: 0.8 }}>
-                                    <svg width="40" height="6" viewBox="0 0 40 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M0 3 C 5 0, 5 6, 10 3 C 15 0, 15 6, 20 3 C 25 0, 25 6, 30 3 C 35 0, 35 6, 40 3" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none"/>
-                                    </svg>
-                                </div>
+                        {/* Smooth Horizontal Slide Banner Carousel */}
+                        <div className="hero-slider-track-container" style={{ overflow: 'hidden', borderRadius: '18px', position: 'relative', margin: '0 16px' }}>
+                            <div
+                                className="hero-slider-track"
+                                style={{
+                                    display: 'flex',
+                                    transform: `translateX(-${currentSlide * 100}%)`,
+                                    transition: 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)',
+                                    width: '100%'
+                                }}
+                            >
+                                {sliderSlides.map((slide, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="hero-slide-item"
+                                        style={{
+                                            minWidth: '100%',
+                                            flex: '0 0 100%',
+                                            height: '185px',
+                                            backgroundImage: `linear-gradient(to top, rgba(12, 41, 74, 0.88), rgba(12, 41, 74, 0.35)), url('${slide.img}')`,
+                                            backgroundSize: 'cover',
+                                            backgroundPosition: 'center',
+                                            borderRadius: '18px',
+                                            padding: '20px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'flex-end',
+                                            color: 'white',
+                                            boxSizing: 'border-box',
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        <h3 style={{ fontSize: '1.25rem', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.6)', margin: 0 }}>{slide.title}</h3>
+                                        <p style={{ fontSize: '0.85rem', opacity: 0.9, marginTop: '4px', textShadow: '0 1px 3px rgba(0,0,0,0.6)', margin: 0 }}>{slide.subtitle}</p>
 
-                                <div className="slider-dots">
-                                    {sliderImages.map((_, idx) => (
-                                        <span 
-                                            key={idx} 
-                                            className={`slider-dot ${currentSlide === idx ? 'active' : ''}`}
-                                            onClick={() => setCurrentSlide(idx)}
-                                        ></span>
-                                    ))}
+                                        <div className="slider-wave-decor" style={{ margin: '6px 0 24px 0', opacity: 0.85 }}>
+                                            <svg width="42" height="6" viewBox="0 0 42 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M0 3 C 5 0, 5 6, 10 3 C 15 0, 15 6, 20 3 C 25 0, 25 6, 30 3 C 35 0, 35 6, 40 3" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Dots Indicator Overlay */}
+                            <div className="slider-dots-overlay" style={{ position: 'absolute', bottom: '12px', left: '0', right: '0', display: 'flex', justifyContent: 'center', gap: '6px', zIndex: 10 }}>
+                                {sliderSlides.map((_, idx) => (
+                                    <span
+                                        key={idx}
+                                        className={`slider-dot ${currentSlide === idx ? 'active' : ''}`}
+                                        onClick={() => setCurrentSlide(idx)}
+                                        style={{
+                                            width: currentSlide === idx ? '22px' : '8px',
+                                            height: '8px',
+                                            borderRadius: '4px',
+                                            backgroundColor: currentSlide === idx ? '#2563eb' : 'rgba(255,255,255,0.6)',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.3s ease'
+                                        }}
+                                    ></span>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Mode Switcher: OFFLINE vs ONLINE (Hanya Tampil di Mode Kasir) */}
+                        {isCashierMode ? (
+                            <div style={{ padding: '0 16px', marginTop: '14px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', backgroundColor: '#e2e8f0', padding: '4px', borderRadius: '12px' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPosMode('offline')}
+                                        style={{
+                                            backgroundColor: posMode === 'offline' ? '#0c294a' : 'transparent',
+                                            color: posMode === 'offline' ? 'white' : '#64748b',
+                                            border: 'none',
+                                            padding: '10px',
+                                            borderRadius: '10px',
+                                            fontSize: '0.82rem',
+                                            fontWeight: 800,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '6px',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        <i className="fa-solid fa-store"></i> OFFLINE (Loket Fisik)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPosMode('online')}
+                                        style={{
+                                            backgroundColor: posMode === 'online' ? '#25D366' : 'transparent',
+                                            color: posMode === 'online' ? 'white' : '#64748b',
+                                            border: 'none',
+                                            padding: '10px',
+                                            borderRadius: '10px',
+                                            fontSize: '0.82rem',
+                                            fontWeight: 800,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '6px',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        <i className="fa-brands fa-whatsapp"></i> ONLINE (WA PDF)
+                                    </button>
                                 </div>
                             </div>
+                        ) : (
+                            <div style={{ padding: '0 16px', marginTop: '14px' }}>
+                                <div style={{
+                                    backgroundColor: '#f0fdf4',
+                                    border: '1.5px solid #86efac',
+                                    borderRadius: '14px',
+                                    padding: '12px 16px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    boxShadow: '0 2px 8px rgba(37, 211, 102, 0.1)'
+                                }}>
+                                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#25D366', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                                        <i className="fa-brands fa-whatsapp"></i>
+                                    </div>
+                                    <div>
+                                        <h5 style={{ margin: 0, color: '#166534', fontSize: '0.92rem', fontWeight: 900 }}>PEMESANAN TIKET ONLINE WA</h5>
+                                        <small style={{ color: '#15803d', fontSize: '0.78rem', fontWeight: 600 }}>Tiket PDF resmi langsung dikirim ke WhatsApp Anda via Admin</small>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{ fontSize: '0.75rem', color: posMode === 'offline' ? '#0c294a' : '#15803d', marginTop: '6px', fontWeight: 700, textAlign: 'center' }}>
+                            {posMode === 'offline'
+                                ? '⚡ Pembelian Offline: Langsung dapet tiket & struk cetak di lokasi kasir.'
+                                : '📱 Pembelian Online: Chat WA Admin dlu baru dikirim Tiket PDF.'}
                         </div>
 
                         {/* Ticket Selector Section */}
                         <div className="app-section">
                             <h4 className="section-title"><i className="fa-solid fa-tag text-blue"></i> PILIH JENIS TIKET</h4>
                             <div className="ticket-cards-scroll">
-                                <div 
+                                <div
                                     className={`app-ticket-card reguler ${selectedTicket === 'reguler' ? 'active' : ''}`}
                                     onClick={() => setSelectedTicket('reguler')}
                                 >
@@ -288,7 +550,7 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                                     <span className="price-unit">/orang</span>
                                 </div>
 
-                                <div 
+                                <div
                                     className={`app-ticket-card rombongan ${selectedTicket === 'rombongan' ? 'active' : ''}`}
                                     onClick={() => setSelectedTicket('rombongan')}
                                 >
@@ -300,7 +562,7 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                                     <span className="price-unit">/orang</span>
                                 </div>
 
-                                <div 
+                                <div
                                     className={`app-ticket-card kursus ${selectedTicket === 'kursus' ? 'active' : ''}`}
                                     onClick={() => setSelectedTicket('kursus')}
                                 >
@@ -314,16 +576,15 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                             </div>
                         </div>
 
-                        {/* Ticket Counter Section */}
+                        {/* Ticket Counter & Subtotal Section */}
                         <div className="app-section">
-                            <span className="counter-section-title" style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-primary)', display: 'block', marginBottom: '8px', letterSpacing: '0.5px' }}>
+                            <span className="counter-section-title" style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0c294a', display: 'block', marginBottom: '8px', letterSpacing: '0.5px' }}>
                                 JUMLAH {selectedTicket === 'reguler' ? 'TIKET REGULER' : selectedTicket === 'rombongan' ? 'TIKET ROMBONGAN' : 'KURSUS RENANG'}
                             </span>
                             <div className="ticket-counter-row">
-                                {/* Left Side: Counter Box */}
                                 <div className="counter-box-wrapper">
-                                    <button 
-                                        className={`counter-circle-btn minus ${ticketQty > 0 ? 'active' : ''}`}
+                                    <button
+                                        className="counter-btn-sq minus"
                                         onClick={() => ticketQty > 0 && setTicketQty(ticketQty - 1)}
                                     >
                                         -
@@ -332,15 +593,14 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                                         <span className="counter-number-val">{ticketQty}</span>
                                         <span className="counter-number-unit">Orang</span>
                                     </div>
-                                    <button 
-                                        className="counter-circle-btn plus" 
+                                    <button
+                                        className="counter-btn-sq plus"
                                         onClick={() => setTicketQty(ticketQty + 1)}
                                     >
                                         +
                                     </button>
                                 </div>
 
-                                {/* Right Side: Subtotal Display Box */}
                                 <div className="subtotal-box-wrapper">
                                     <span className="subtotal-box-label">SUBTOTAL</span>
                                     <span className="subtotal-box-val">Rp {subtotal.toLocaleString('id-ID')}</span>
@@ -351,52 +611,49 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                         {/* Rentals Grid */}
                         <div className="app-section">
                             <h4 className="section-title"><i className="fa-solid fa-bookmark text-blue"></i> TAMBAH SEWA (OPSIONAL)</h4>
-                            <div className="rental-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                                {/* Rent Ban */}
-                                <div className="rental-grid-card" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '10px 8px', boxShadow: 'var(--shadow-soft)', border: '1px solid #eef2f7', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '94px' }}>
-                                    <div className="rental-card-top" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <img src="assets/ban_illustration.png" alt="Sewa Ban" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#0c294a', lineHeight: 1.2 }}>Sewa Ban</span>
-                                            <span style={{ fontSize: '0.55rem', color: '#7b8e9f', fontWeight: 600 }}>Rp 5.000</span>
+                            <div className="rental-cards-grid">
+                                <div className="rental-grid-card">
+                                    <div className="rental-card-top">
+                                        <img src="assets/ban_illustration.png" alt="Sewa Ban" className="rental-card-img" />
+                                        <div className="rental-card-meta">
+                                            <span className="rental-card-name">Sewa Ban</span>
+                                            <span className="rental-card-price">Rp 5.000</span>
                                         </div>
                                     </div>
-                                    <div className="rental-card-counter" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f5f8fc', borderRadius: '8px', padding: '4px 6px', marginTop: '8px' }}>
-                                        <button onClick={() => sewaBan > 0 && setSewaBan(sewaBan - 1)} style={{ background: 'none', border: 'none', color: '#1a73e8', fontWeight: 800, fontSize: '0.9rem', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>-</button>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0c294a' }}>{sewaBan}</span>
-                                        <button onClick={() => setSewaBan(sewaBan + 1)} style={{ background: 'none', border: 'none', color: '#1a73e8', fontWeight: 800, fontSize: '0.9rem', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>+</button>
+                                    <div className="rental-card-counter">
+                                        <button onClick={() => sewaBan > 0 && setSewaBan(sewaBan - 1)} className="r-btn">-</button>
+                                        <span className="r-val">{sewaBan}</span>
+                                        <button onClick={() => setSewaBan(sewaBan + 1)} className="r-btn">+</button>
                                     </div>
                                 </div>
 
-                                {/* Rent Sepeda Air */}
-                                <div className="rental-grid-card" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '10px 8px', boxShadow: 'var(--shadow-soft)', border: '1px solid #eef2f7', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '94px' }}>
-                                    <div className="rental-card-top" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <img src="assets/sepeda_air_illustration.png" alt="Sewa Sepeda Air" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#0c294a', lineHeight: 1.2 }}>Sewa Sepeda Air</span>
-                                            <span style={{ fontSize: '0.55rem', color: '#7b8e9f', fontWeight: 600 }}>Rp 5.000</span>
+                                <div className="rental-grid-card">
+                                    <div className="rental-card-top">
+                                        <img src="assets/sepeda_air_illustration.png" alt="Sewa Sepeda Air" className="rental-card-img" />
+                                        <div className="rental-card-meta">
+                                            <span className="rental-card-name">Sewa Sepeda Air</span>
+                                            <span className="rental-card-price">Rp 5.000</span>
                                         </div>
                                     </div>
-                                    <div className="rental-card-counter" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f5f8fc', borderRadius: '8px', padding: '4px 6px', marginTop: '8px' }}>
-                                        <button onClick={() => sewaSepeda > 0 && setSewaSepeda(sewaSepeda - 1)} style={{ background: 'none', border: 'none', color: '#1a73e8', fontWeight: 800, fontSize: '0.9rem', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>-</button>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0c294a' }}>{sewaSepeda}</span>
-                                        <button onClick={() => setSewaSepeda(sewaSepeda + 1)} style={{ background: 'none', border: 'none', color: '#1a73e8', fontWeight: 800, fontSize: '0.9rem', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>+</button>
+                                    <div className="rental-card-counter">
+                                        <button onClick={() => sewaSepeda > 0 && setSewaSepeda(sewaSepeda - 1)} className="r-btn">-</button>
+                                        <span className="r-val">{sewaSepeda}</span>
+                                        <button onClick={() => setSewaSepeda(sewaSepeda + 1)} className="r-btn">+</button>
                                     </div>
                                 </div>
 
-                                {/* Rent Gazebo */}
-                                <div className="rental-grid-card" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '10px 8px', boxShadow: 'var(--shadow-soft)', border: '1px solid #eef2f7', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '94px' }}>
-                                    <div className="rental-card-top" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <img src="assets/saung.png.png?v=1.1" alt="Sewa Gazebo" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#0c294a', lineHeight: 1.2 }}>Sewa Gazebo</span>
-                                            <span style={{ fontSize: '0.55rem', color: '#7b8e9f', fontWeight: 600 }}>Rp 20.000</span>
+                                <div className="rental-grid-card">
+                                    <div className="rental-card-top">
+                                        <img src="assets/saung.png.png?v=1.1" alt="Sewa Gazebo" className="rental-card-img" />
+                                        <div className="rental-card-meta">
+                                            <span className="rental-card-name">Sewa Gazebo</span>
+                                            <span className="rental-card-price">Rp 20.000</span>
                                         </div>
                                     </div>
-                                    <div className="rental-card-counter" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f5f8fc', borderRadius: '8px', padding: '4px 6px', marginTop: '8px' }}>
-                                        <button onClick={() => sewaGazebo > 0 && setSewaGazebo(sewaGazebo - 1)} style={{ background: 'none', border: 'none', color: '#1a73e8', fontWeight: 800, fontSize: '0.9rem', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>-</button>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0c294a' }}>{sewaGazebo}</span>
-                                        <button onClick={() => setSewaGazebo(sewaGazebo + 1)} style={{ background: 'none', border: 'none', color: '#1a73e8', fontWeight: 800, fontSize: '0.9rem', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>+</button>
+                                    <div className="rental-card-counter">
+                                        <button onClick={() => sewaGazebo > 0 && setSewaGazebo(sewaGazebo - 1)} className="r-btn">-</button>
+                                        <span className="r-val">{sewaGazebo}</span>
+                                        <button onClick={() => setSewaGazebo(sewaGazebo + 1)} className="r-btn">+</button>
                                     </div>
                                 </div>
                             </div>
@@ -408,7 +665,7 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                 {/* 2. TIKET SAYA TAB */}
                 {activeTab === 'tiket' && (
                     <div className="app-tab-pane fade-in" style={{ padding: '20px' }}>
-                        <h3 className="tab-title">Tiket Aktif Saya</h3>
+                        <h3 className="tab-title">Tiket Saya (Tanpa Login)</h3>
                         {activeTicketData ? (
                             <div className="digital-ticket-card">
                                 <div className="ticket-card-header">
@@ -421,34 +678,30 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                                 <div className="ticket-card-body">
                                     <div className="ticket-info-grid">
                                         <div>
+                                            <span>PEMESAN</span>
+                                            <p>{activeTicketData.name}</p>
+                                        </div>
+                                        <div>
                                             <span>JENIS TIKET</span>
                                             <p>{activeTicketData.type}</p>
                                         </div>
                                         <div>
-                                            <span>JUMLAH</span>
+                                            <span>JUMLAH TIKET</span>
                                             <p>{activeTicketData.qty} Orang</p>
                                         </div>
-                                        <div style={{ gridColumn: 'span 2' }}>
+                                        <div>
                                             <span>TANGGAL KUNJUNGAN</span>
                                             <p>{activeTicketData.date}</p>
                                         </div>
-                                        {activeTicketData.rentals.ban > 0 || activeTicketData.rentals.sepeda > 0 || activeTicketData.rentals.gazebo > 0 ? (
-                                            <div style={{ gridColumn: 'span 2', borderTop: '1px dashed #ddd', paddingTop: '10px', marginTop: '5px' }}>
-                                                <span>TAMBAHAN SEWA</span>
-                                                <p style={{ fontSize: '0.8rem', color: '#666' }}>
-                                                    {activeTicketData.rentals.ban > 0 && ` Ban (${activeTicketData.rentals.ban}x) `}
-                                                    {activeTicketData.rentals.sepeda > 0 && ` Sepeda Air (${activeTicketData.rentals.sepeda}x) `}
-                                                    {activeTicketData.rentals.gazebo > 0 && ` Gazebo (${activeTicketData.rentals.gazebo}x) `}
-                                                </p>
-                                            </div>
-                                        ) : null}
                                     </div>
-                                    
-                                    {/* Mock Barcode Graphic */}
+
+                                    <div style={{ backgroundColor: '#fffbebf', border: '1px solid #fef3c7', padding: '10px', borderRadius: '10px', margin: '14px 0', fontSize: '0.78rem', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: '1.1rem' }}></i>
+                                        <span>Konfirmasi pemesanan telah dikirim ke WA Admin. E-Tiket PDF resmi akan dikirimkan oleh Admin.</span>
+                                    </div>
+
                                     <div className="ticket-barcode-container">
                                         <div className="mock-barcode">
-                                            <span></span><span></span><span></span><span></span>
-                                            <span></span><span></span><span></span><span></span>
                                             <span></span><span></span><span></span><span></span>
                                             <span></span><span></span><span></span><span></span>
                                             <span></span><span></span><span></span><span></span>
@@ -456,18 +709,11 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                                         <small className="barcode-number">{activeTicketData.code}</small>
                                     </div>
                                 </div>
-                                <div className="ticket-card-footer">
-                                    <p>Tunjukkan Barcode ini ke Petugas Tiket Masuk</p>
-                                </div>
                             </div>
                         ) : (
                             <div className="empty-state-box">
                                 <i className="fa-solid fa-ticket-simple empty-icon"></i>
-                                <h4>Belum Ada Tiket Aktif</h4>
-                                <p>Silakan lakukan pembelian tiket terlebih dahulu pada tab Beranda.</p>
-                                <button className="btn btn-primary btn-pill" onClick={() => setActiveTab('beranda')}>
-                                    Pesan Sekarang
-                                </button>
+                                <h4>Belum Ada Tiket Pemesanan</h4>
                             </div>
                         )}
                     </div>
@@ -476,7 +722,7 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                 {/* 3. RIWAYAT TAB */}
                 {activeTab === 'riwayat' && (
                     <div className="app-tab-pane fade-in" style={{ padding: '20px' }}>
-                        <h3 className="tab-title">Riwayat Transaksi</h3>
+                        <h3 className="tab-title">Riwayat Transaksi Langsung</h3>
                         <div className="history-list-container">
                             {historyList.map((item, idx) => (
                                 <div key={idx} className="history-item-card">
@@ -485,12 +731,10 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                                             <h4>{item.type}</h4>
                                             <small>{item.date} &bull; {item.code}</small>
                                         </div>
-                                        <span className={`status-badge ${item.status === 'Aktif' ? 'active' : 'used'}`}>
-                                            {item.status}
-                                        </span>
+                                        <span className="status-badge used">{item.status}</span>
                                     </div>
                                     <div className="history-card-details">
-                                        <span>Jumlah: {item.qty} tiket</span>
+                                        <span>Pemesanan: {item.name}</span>
                                         <strong>Rp {item.total.toLocaleString('id-ID')}</strong>
                                     </div>
                                 </div>
@@ -502,67 +746,26 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                 {/* 4. PROFIL TAB */}
                 {activeTab === 'profil' && (
                     <div className="app-tab-pane fade-in" style={{ padding: '20px' }}>
-                        <h3 className="tab-title">Profil Pengguna</h3>
-                        
-                        {/* Profile Card Header */}
+                        <h3 className="tab-title">Informasi Pengunjung</h3>
                         <div className="profile-header-card">
                             <div className="profile-avatar-wrapper">
-                                <img src={isCashierMode ? "assets/logo.png" : "assets/bebek.png?v=1.1"} alt="Profile Avatar" className="profile-large-avatar" style={{ objectFit: 'contain', padding: isCashierMode ? '8px' : '0' }} />
+                                <img src="assets/bebek.png?v=1.1" alt="Profile Avatar" className="profile-large-avatar" />
                             </div>
-                            <h4>{isCashierMode ? "Petugas Kasir 1" : "Pengunjung Setia Cijoho"}</h4>
-                            <p>{isCashierMode ? "kasir1@cijohoindah.com" : "pengunjung@cijohoindah.com"}</p>
-                            {isCashierMode && <span className="cashier-shift-badge" style={{ backgroundColor: '#eff6ff', color: '#1a73e8', fontSize: '0.7rem', fontWeight: 800, padding: '4px 12px', borderRadius: '50px', display: 'inline-block', marginTop: '6px', border: '1px solid #dbe8f7' }}>Shift Pagi</span>}
-                        </div>
-
-                        {/* Account Menu List */}
-                        <div className="profile-options-list">
-                            <div className="profile-option-item">
-                                <i className="fa-solid fa-user-pen"></i>
-                                <span>Edit Akun Profil</span>
-                                <i className="fa-solid fa-chevron-right arrow-right"></i>
-                            </div>
-                            <div className="profile-option-item" onClick={() => window.open('https://wa.me/6281234567890', '_blank')}>
-                                <i className="fa-solid fa-headset"></i>
-                                <span>Hubungi Layanan Pengunjung (WA)</span>
-                                <i className="fa-solid fa-chevron-right arrow-right"></i>
-                            </div>
-                            <div className="profile-option-item" onClick={() => setActiveTab('beranda')}>
-                                <i className="fa-solid fa-circle-question"></i>
-                                <span>Pusat Bantuan & FAQ</span>
-                                <i className="fa-solid fa-chevron-right arrow-right"></i>
-                            </div>
-                            {isCashierMode && (
-                                <div 
-                                    className="profile-option-item" 
-                                    onClick={() => {
-                                        localStorage.removeItem('staffSession');
-                                        window.location.reload();
-                                    }}
-                                    style={{ color: '#d93838' }}
-                                >
-                                    <i className="fa-solid fa-arrow-right-from-bracket" style={{ color: '#d93838' }}></i>
-                                    <span>Keluar / Log Out</span>
-                                    <i className="fa-solid fa-chevron-right arrow-right"></i>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* App Version Info */}
-                        <div className="app-version-box">
-                            <small>Waterboom Cijoho Indah Mobile v1.0.0</small>
+                            <h4>Beli Tiket Tanpa Akun</h4>
+                            <p>Pembelian tiket langsung tanpa perlu buat akun / login</p>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Checkout Payment Bar (Rendered outside scrollable content for proper fixed positioning in frame) */}
+            {/* Checkout Payment Bar */}
             {activeTab === 'beranda' && (
                 <div className="app-checkout-bar">
                     <div className="checkout-total-col">
                         <span className="total-label">TOTAL TAGIHAN</span>
-                        <span className="total-value" style={{ color: '#1a73e8', fontWeight: 900 }}>Rp {grandTotal.toLocaleString('id-ID')}</span>
+                        <span className="total-value">Rp {grandTotal.toLocaleString('id-ID')}</span>
                     </div>
-                    <button className="checkout-btn" onClick={handlePayment}>
+                    <button className="checkout-btn" onClick={handlePaymentClick}>
                         BAYAR <i className="fa-solid fa-arrow-right"></i>
                     </button>
                 </div>
@@ -570,139 +773,264 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
 
             {/* Bottom Tab Navigation Bar */}
             <nav className="mobile-app-bottom-nav">
-                <button 
+                <button
                     className={`bottom-nav-item ${activeTab === 'beranda' ? 'active' : ''}`}
                     onClick={() => setActiveTab('beranda')}
                 >
                     <i className="fa-solid fa-house"></i>
                     <span>Beranda</span>
                 </button>
-                <button 
+                <button
                     className={`bottom-nav-item ${activeTab === 'tiket' ? 'active' : ''}`}
                     onClick={() => setActiveTab('tiket')}
                 >
                     <i className="fa-solid fa-ticket"></i>
                     <span>Tiket Saya</span>
                 </button>
-                <button 
+                <button
                     className={`bottom-nav-item ${activeTab === 'riwayat' ? 'active' : ''}`}
                     onClick={() => setActiveTab('riwayat')}
                 >
                     <i className="fa-solid fa-clock-rotate-left"></i>
                     <span>Riwayat</span>
                 </button>
-                <button 
-                    className={`bottom-nav-item ${activeTab === 'profil' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('profil')}
-                >
-                    <i className="fa-solid fa-user"></i>
-                    <span>Profil</span>
-                </button>
             </nav>
 
-            {/* Cashier Receipt Modal / Struk Penjualan */}
-            {showReceipt && receiptData && (
-                <div className="receipt-modal-backdrop" onClick={handleNewTransaction}>
-                    <div className="receipt-modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="receipt-success-icon">
-                            <i className="fa-solid fa-circle-check"></i>
+            {/* MODAL KONFIRMASI PEMBELIAN LANGSUNG & WA ADMIN (TANPA AKUN) */}
+            {showWACheckoutModal && (
+                <div className="v-modal-backdrop" onClick={() => setShowWACheckoutModal(false)}>
+                    <div className="v-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+                        <div className="v-modal-head" style={{ backgroundColor: '#0c294a', color: 'white' }}>
+                            <h4 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <i className="fa-solid fa-ticket"></i> Form Beli Tiket (Tanpa Akun)
+                            </h4>
+                            <button onClick={() => setShowWACheckoutModal(false)} style={{ color: 'white' }}>&times;</button>
                         </div>
-                        <h3>Pembayaran Berhasil!</h3>
-                        <p className="receipt-subtitle">Transaksi telah berhasil diproses.</p>
-                        
-                        <div className="receipt-divider-dashed"></div>
-                        
-                        <div className="receipt-details-list">
-                            <div className="receipt-detail-row">
-                                <span>No. Transaksi</span>
-                                <strong>{receiptData.code}</strong>
+
+                        <form onSubmit={handleConfirmWhatsAppOrder} className="v-modal-body" style={{ padding: '20px' }}>
+                            <p style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '16px' }}>
+                                Masukkan nama & nomor WhatsApp Anda. Konfirmasi pemesanan akan dikirim ke WhatsApp Admin dan Admin akan mengirimkan **Tiket Resmi (PDF)** ke nomor Anda.
+                            </p>
+
+                            <div className="input-group-field" style={{ marginBottom: '14px' }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0c294a' }}>Nama Pemesan</label>
+                                <input
+                                    type="text"
+                                    value={buyerName}
+                                    onChange={(e) => setBuyerName(e.target.value)}
+                                    required
+                                    placeholder="Contoh: Budi Santoso"
+                                    className="v-input"
+                                />
                             </div>
-                            <div className="receipt-detail-row">
-                                <span>Waktu</span>
-                                <span>{receiptData.date}</span>
+
+                            <div className="input-group-field" style={{ marginBottom: '14px' }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0c294a' }}>No. WhatsApp / HP Pemesan</label>
+                                <input
+                                    type="text"
+                                    value={buyerPhone}
+                                    onChange={(e) => setBuyerPhone(e.target.value)}
+                                    required
+                                    placeholder="Contoh: 081234567890"
+                                    className="v-input"
+                                />
                             </div>
-                            <div className="receipt-detail-row">
-                                <span>Kasir</span>
-                                <span>Petugas Kasir 1 (Shift Pagi)</span>
-                            </div>
-                            
-                            <div className="receipt-divider-dashed"></div>
-                            
-                            <div className="receipt-item-title">Rincian Tiket:</div>
-                            <div className="receipt-detail-row">
-                                <span>{receiptData.qty}x {receiptData.type}</span>
-                                <span>Rp {receiptData.subtotal.toLocaleString('id-ID')}</span>
-                            </div>
-                            
-                            {(receiptData.rentals.ban > 0 || receiptData.rentals.sepeda > 0 || receiptData.rentals.gazebo > 0) && (
-                                <>
-                                    <div className="receipt-item-title" style={{ marginTop: '8px' }}>Rincian Tambahan:</div>
-                                    {receiptData.rentals.ban > 0 && (
-                                        <div className="receipt-detail-row">
-                                            <span>{receiptData.rentals.ban}x Sewa Ban</span>
-                                            <span>Rp {(receiptData.rentals.ban * receiptData.rentalsPrice.ban).toLocaleString('id-ID')}</span>
-                                        </div>
-                                    )}
-                                    {receiptData.rentals.sepeda > 0 && (
-                                        <div className="receipt-detail-row">
-                                            <span>{receiptData.rentals.sepeda}x Sewa Sepeda Air</span>
-                                            <span>Rp {(receiptData.rentals.sepeda * receiptData.rentalsPrice.sepeda).toLocaleString('id-ID')}</span>
-                                        </div>
-                                    )}
-                                    {receiptData.rentals.gazebo > 0 && (
-                                        <div className="receipt-detail-row">
-                                            <span>{receiptData.rentals.gazebo}x Sewa Gazebo</span>
-                                            <span>Rp {(receiptData.rentals.gazebo * receiptData.rentalsPrice.gazebo).toLocaleString('id-ID')}</span>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                            
-                            <div className="receipt-divider-dashed"></div>
-                            
-                            <div className="receipt-detail-row total-row">
-                                <span>TOTAL TAGIHAN</span>
-                                <strong style={{ color: '#1a73e8', fontSize: '1.2rem', fontWeight: 900 }}>Rp {receiptData.total.toLocaleString('id-ID')}</strong>
-                            </div>
-                            
-                            {/* Cash calculator for cashier */}
-                            <div className="receipt-cash-calculator">
-                                <div className="cash-input-field">
-                                    <label>Uang Tunai (Bayar)</label>
-                                    <div className="cash-input-wrapper">
-                                        <span className="currency-prefix">Rp</span>
-                                        <input 
-                                            type="number" 
-                                            placeholder="0"
-                                            value={cashReceived}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                setCashReceived(val);
-                                                const tunai = parseFloat(val) || 0;
-                                                if (tunai >= receiptData.total) {
-                                                    setCashChange(tunai - receiptData.total);
-                                                } else {
-                                                    setCashChange(0);
-                                                }
-                                            }}
-                                            className="cash-input"
-                                            style={{ border: 'none', background: 'none', outline: 'none', fontWeight: 800, width: '100%', color: '#0c294a' }}
-                                        />
-                                    </div>
+
+                            {/* Summary Box */}
+                            <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px' }}>RINGKASAN PESANAN:</div>
+                                <div style={{ fontSize: '0.85rem', color: '#0c294a', display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                    <span>{ticketQty}x {selectedTicket === 'reguler' ? 'Tiket Reguler' : selectedTicket === 'rombongan' ? 'Tiket Rombongan' : 'Kursus Renang'}</span>
+                                    <strong>Rp {subtotal.toLocaleString('id-ID')}</strong>
                                 </div>
-                                <div className="cash-change-display">
-                                    <span>Kembalian</span>
-                                    <strong style={{ color: '#2b8a2e', fontSize: '1.15rem' }}>Rp {cashChange.toLocaleString('id-ID')}</strong>
+                                {sewaBan > 0 && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>• {sewaBan}x Sewa Ban</div>}
+                                {sewaSepeda > 0 && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>• {sewaSepeda}x Sewa Sepeda Air</div>}
+                                {sewaGazebo > 0 && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>• {sewaGazebo}x Sewa Gazebo</div>}
+
+                                <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '8px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>TOTAL BAYAR</span>
+                                    <strong style={{ fontSize: '1.2rem', color: '#1a73e8', fontWeight: 900 }}>Rp {grandTotal.toLocaleString('id-ID')}</strong>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div className="receipt-modal-actions">
-                            <button className="receipt-btn btn-print" onClick={handlePrintReceipt}>
-                                <i className="fa-solid fa-print"></i> Cetak Struk
+
+                            <button
+                                type="submit"
+                                className="btn w-full btn-pill"
+                                style={{ backgroundColor: '#25D366', color: 'white', fontWeight: 800, padding: '14px', fontSize: '0.92rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.3)' }}
+                            >
+                                <i className="fa-brands fa-whatsapp" style={{ fontSize: '1.3rem' }}></i> KONFIRMASI KE WA ADMIN (TERIMA PDF)
                             </button>
-                            <button className="receipt-btn btn-new" onClick={handleNewTransaction}>
-                                Transaksi Baru <i className="fa-solid fa-plus"></i>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL LOKET KASIR OFFLINE */}
+            {showOfflinePOSModal && (
+                <div className="v-modal-backdrop" onClick={() => setShowOfflinePOSModal(false)}>
+                    <div className="v-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px', backgroundColor: 'white' }}>
+                        <div className="v-modal-head" style={{ backgroundColor: '#0c294a', color: 'white' }}>
+                            <h4 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <i className="fa-solid fa-store"></i> Pembayaran Loket Offline
+                            </h4>
+                            <button onClick={() => setShowOfflinePOSModal(false)} style={{ color: 'white' }}>&times;</button>
+                        </div>
+
+                        <form onSubmit={handleConfirmOfflinePOS} className="v-modal-body" style={{ padding: '20px' }}>
+                            <p style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '14px' }}>
+                                Transaksi offline langsung di tempat. Tiket & Struk fisik langsung dicetak di lokasi kasir.
+                            </p>
+
+                            {/* Payment Method Selector */}
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0c294a', display: 'block', marginBottom: '8px' }}>Metode Pembayaran</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('cash')}
+                                        style={{
+                                            padding: '10px',
+                                            borderRadius: '8px',
+                                            border: paymentMethod === 'cash' ? '2px solid #0c294a' : '1px solid #cbd5e1',
+                                            backgroundColor: paymentMethod === 'cash' ? '#eff6ff' : 'white',
+                                            color: paymentMethod === 'cash' ? '#0c294a' : '#64748b',
+                                            fontWeight: 800,
+                                            fontSize: '0.85rem',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <i className="fa-solid fa-money-bill-wave"></i> Tunai (Cash)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('qris')}
+                                        style={{
+                                            padding: '10px',
+                                            borderRadius: '8px',
+                                            border: paymentMethod === 'qris' ? '2px solid #0c294a' : '1px solid #cbd5e1',
+                                            backgroundColor: paymentMethod === 'qris' ? '#eff6ff' : 'white',
+                                            color: paymentMethod === 'qris' ? '#0c294a' : '#64748b',
+                                            fontWeight: 800,
+                                            fontSize: '0.85rem',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <i className="fa-solid fa-qrcode"></i> QRIS / EDC
+                                    </button>
+                                </div>
+                            </div>
+
+                            {paymentMethod === 'cash' && (
+                                <div className="input-group-field" style={{ marginBottom: '14px' }}>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0c294a' }}>Jumlah Uang Tunai Diterima (Rp)</label>
+                                    <input
+                                        type="number"
+                                        value={cashReceived}
+                                        onChange={(e) => setCashReceived(e.target.value)}
+                                        placeholder={`Minimal Rp ${grandTotal.toLocaleString('id-ID')}`}
+                                        className="v-input"
+                                        required
+                                    />
+                                    {parseInt(cashReceived) >= grandTotal && (
+                                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#047857', marginTop: '6px', backgroundColor: '#d1fae5', padding: '6px 10px', borderRadius: '6px' }}>
+                                            Kembalian: Rp {(parseInt(cashReceived) - grandTotal).toLocaleString('id-ID')}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Order Summary */}
+                            <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '6px' }}>RINCIAN TRANSAKSI OFFLINE:</div>
+                                <div style={{ fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', color: '#0c294a' }}>
+                                    <span>{ticketQty}x {selectedTicket === 'reguler' ? 'Tiket Reguler' : selectedTicket === 'rombongan' ? 'Tiket Rombongan' : 'Kursus Renang'}</span>
+                                    <strong>Rp {subtotal.toLocaleString('id-ID')}</strong>
+                                </div>
+                                {sewaBan > 0 && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>• {sewaBan}x Sewa Ban</div>}
+                                {sewaSepeda > 0 && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>• {sewaSepeda}x Sewa Sepeda Air</div>}
+                                {sewaGazebo > 0 && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>• {sewaGazebo}x Sewa Gazebo</div>}
+
+                                <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '8px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>TOTAL</span>
+                                    <strong style={{ fontSize: '1.2rem', color: '#0c294a', fontWeight: 900 }}>Rp {grandTotal.toLocaleString('id-ID')}</strong>
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="btn w-full btn-pill"
+                                style={{ backgroundColor: '#0c294a', color: 'white', fontWeight: 800, padding: '14px', fontSize: '0.92rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                                <i className="fa-solid fa-print"></i> BAYAR & CETAK STRUK TIKET FISIK
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL TAMPILAN STRUK & TIKET FISIK (OFFLINE) */}
+            {showOfflineReceiptModal && offlineReceiptData && (
+                <div className="v-modal-backdrop" onClick={() => setShowOfflineReceiptModal(false)}>
+                    <div className="v-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px', backgroundColor: 'white' }}>
+                        <div className="v-modal-head" style={{ backgroundColor: '#0c294a', color: 'white' }}>
+                            <h4 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <i className="fa-solid fa-receipt"></i> Struk & Tiket Fisik (Loket Offline)
+                            </h4>
+                            <button onClick={() => setShowOfflineReceiptModal(false)} style={{ color: 'white' }}>&times;</button>
+                        </div>
+
+                        <div className="v-modal-body" style={{ padding: '20px' }}>
+                            <div id="thermal-receipt-printable" style={{ border: '2px solid #0c294a', borderRadius: '14px', padding: '16px', backgroundColor: '#fff', fontFamily: 'monospace' }}>
+                                <div style={{ textAlign: 'center', borderBottom: '1px dashed #0c294a', paddingBottom: '10px', marginBottom: '12px' }}>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0c294a', margin: 0 }}>WATERBOOM CIJOHO INDAH</h3>
+                                    <small style={{ display: 'block', color: '#64748b', fontWeight: 700 }}>STRUK & TIKET FISIK RESMI LOKET</small>
+                                    <small style={{ color: '#047857', fontWeight: 900, fontSize: '0.75rem' }}>[ LUNAS / VALIDATED ]</small>
+                                </div>
+
+                                <div style={{ fontSize: '0.8rem', lineHeight: '1.4', marginBottom: '10px' }}>
+                                    <div><strong>No. Struk:</strong> {offlineReceiptData.code}</div>
+                                    <div><strong>Tanggal:</strong> {offlineReceiptData.date} ({offlineReceiptData.time})</div>
+                                    <div><strong>Kasir:</strong> {offlineReceiptData.cashierName}</div>
+                                    <div><strong>Metode:</strong> {offlineReceiptData.paymentMethod}</div>
+                                </div>
+
+                                <div style={{ borderTop: '1px dashed #cbd5e1', borderBottom: '1px dashed #cbd5e1', padding: '8px 0', margin: '8px 0', fontSize: '0.8rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>{offlineReceiptData.qty}x {offlineReceiptData.type}</span>
+                                        <strong>Rp {offlineReceiptData.subtotal?.toLocaleString('id-ID')}</strong>
+                                    </div>
+                                    {offlineReceiptData.rentals?.ban > 0 && <div style={{ fontSize: '0.75rem', color: '#64748b' }}>• {offlineReceiptData.rentals.ban}x Sewa Ban</div>}
+                                    {offlineReceiptData.rentals?.sepeda > 0 && <div style={{ fontSize: '0.75rem', color: '#64748b' }}>• {offlineReceiptData.rentals.sepeda}x Sewa Sepeda Air</div>}
+                                    {offlineReceiptData.rentals?.gazebo > 0 && <div style={{ fontSize: '0.75rem', color: '#64748b' }}>• {offlineReceiptData.rentals.gazebo}x Sewa Gazebo</div>}
+                                </div>
+
+                                <div style={{ fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', fontWeight: 900, color: '#0c294a', marginBottom: '4px' }}>
+                                    <span>TOTAL:</span>
+                                    <span>Rp {offlineReceiptData.total?.toLocaleString('id-ID')}</span>
+                                </div>
+                                <div style={{ fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                                    <span>DITERIMA:</span>
+                                    <span>Rp {offlineReceiptData.paidAmount?.toLocaleString('id-ID')}</span>
+                                </div>
+                                <div style={{ fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between', color: '#047857', fontWeight: 800 }}>
+                                    <span>KEMBALIAN:</span>
+                                    <span>Rp {offlineReceiptData.change?.toLocaleString('id-ID')}</span>
+                                </div>
+
+                                <div style={{ textAlign: 'center', marginTop: '14px', borderTop: '1px dashed #cbd5e1', paddingTop: '10px' }}>
+                                    <div style={{ fontSize: '3rem', color: '#0c294a', lineHeight: 1 }}>
+                                        <i className="fa-solid fa-barcode"></i>
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', fontWeight: 900, letterSpacing: '2px', color: '#0c294a' }}>{offlineReceiptData.code}</div>
+                                    <small style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginTop: '4px' }}>Tunjukkan struk/tiket fisik ini di wahana air</small>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => window.print()}
+                                style={{ width: '100%', backgroundColor: '#1a73e8', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                                <i className="fa-solid fa-print"></i> Cetak Struk Tiket Fisik
                             </button>
                         </div>
                     </div>

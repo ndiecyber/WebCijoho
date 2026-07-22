@@ -47,9 +47,9 @@ export default function Tickets({ onOpenBooking }) {
                         </p>
                         <div className="ticket-divider"></div>
                         <p className="ticket-price text-navy">Rp 20.000</p>
-                        <button className="btn btn-primary-dark btn-pill btn-full" onClick={() => onOpenBooking('reguler')}>
-                            <i className="fa-solid fa-cart-shopping" style={{ marginRight: '6px' }}></i> BELI TIKET
-                        </button>
+                        <Link to="/pesan-tiket" className="btn btn-primary-dark btn-pill btn-full" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <i className="fa-solid fa-cart-shopping"></i> BELI TIKET
+                        </Link>
                         
                         {/* Wave Bg at bottom */}
                         <div className="card-wave-container">
@@ -70,9 +70,9 @@ export default function Tickets({ onOpenBooking }) {
                         </p>
                         <div className="ticket-divider"></div>
                         <p className="ticket-price text-green">Rp 5.000</p>
-                        <button className="btn btn-accent btn-pill btn-full" onClick={() => onOpenBooking('ban')}>
-                            <i className="fa-solid fa-cart-shopping" style={{ marginRight: '6px' }}></i> BELI TIKET
-                        </button>
+                        <Link to="/pesan-tiket" className="btn btn-accent btn-pill btn-full" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <i className="fa-solid fa-cart-shopping"></i> BELI TIKET
+                        </Link>
                         
                         {/* Wave Bg at bottom */}
                         <div className="card-wave-container">
@@ -98,9 +98,9 @@ export default function Tickets({ onOpenBooking }) {
                         </p>
                         <div className="ticket-divider"></div>
                         <p className="ticket-price text-teal">Rp 5.000</p>
-                        <button className="btn btn-teal btn-pill btn-full" onClick={() => onOpenBooking('angsa')}>
-                            <i className="fa-solid fa-cart-shopping" style={{ marginRight: '6px' }}></i> BELI TIKET
-                        </button>
+                        <Link to="/pesan-tiket" className="btn btn-teal btn-pill btn-full" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <i className="fa-solid fa-cart-shopping"></i> BELI TIKET
+                        </Link>
                         
                         {/* Wave Bg at bottom */}
                         <div className="card-wave-container">
@@ -121,9 +121,9 @@ export default function Tickets({ onOpenBooking }) {
                         </p>
                         <div className="ticket-divider"></div>
                         <p className="ticket-price text-navy">Rp 20.000</p>
-                        <button className="btn btn-primary-dark btn-pill btn-full" onClick={() => onOpenBooking('gazebo')}>
-                            <i className="fa-solid fa-cart-shopping" style={{ marginRight: '6px' }}></i> BELI TIKET
-                        </button>
+                        <Link to="/pesan-tiket" className="btn btn-primary-dark btn-pill btn-full" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <i className="fa-solid fa-cart-shopping"></i> BELI TIKET
+                        </Link>
                         
                         {/* Wave Bg at bottom */}
                         <div className="card-wave-container">

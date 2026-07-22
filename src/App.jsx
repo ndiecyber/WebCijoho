@@ -17,9 +17,10 @@ import TentangKamiPage from './pages/TentangKamiPage';
 import KontakPage from './pages/KontakPage';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
+import VisitorDashboard from './pages/VisitorDashboard';
 import MobileAppView from './components/MobileAppView';
 
-// Route Guard Component
+// Route Guard Component for Staff
 function ProtectedRoute({ children, allowedRoles }) {
   const session = JSON.parse(localStorage.getItem('staffSession'));
   
@@ -44,9 +45,18 @@ function AppContent() {
   const [bookingDetails, setBookingDetails] = useState(null);
   const location = useLocation();
 
+  React.useEffect(() => {
+    // Fix invalid HashRouter URLs like /login#/ or /login
+    if (window.location.pathname !== '/' && window.location.pathname !== '') {
+      const cleanPath = window.location.pathname.replace(/^\//, '');
+      const search = window.location.search || '?role=staf';
+      window.location.href = window.location.origin + '/#/' + cleanPath + search;
+    }
+  }, [location]);
+
   const handleOpenBooking = (ticketType = 'reguler') => {
     setSelectedTicket(ticketType);
-    setIsBookingOpen(true);
+    navigate('/pesan-tiket');
   };
 
   const handleCloseBooking = () => {
@@ -69,14 +79,14 @@ function AppContent() {
     setIsSuccessOpen(false);
   };
 
-  const isStaffRoute = ['/kasir', '/login', '/admin'].includes(location.pathname);
+  const isFullLayoutRoute = ['/kasir', '/login', '/admin', '/dashboard', '/pengunjung'].includes(location.pathname);
 
   return (
     <>
       <ScrollToTop />
-      {!isStaffRoute && <Header onOpenBooking={handleOpenBooking} />}
+      {!isFullLayoutRoute && <Header onOpenBooking={handleOpenBooking} />}
       
-      <main className={isStaffRoute ? 'staff-main-layout' : ''}>
+      <main className={isFullLayoutRoute ? 'full-dashboard-main-layout' : ''}>
         <Routes>
           <Route path="/" element={<Home onOpenBooking={handleOpenBooking} />} />
           <Route path="/wahana" element={<WahanaPage />} />
@@ -86,6 +96,9 @@ function AppContent() {
           <Route path="/tentang-kami" element={<TentangKamiPage />} />
           <Route path="/kontak" element={<KontakPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/pesan-tiket" element={<VisitorDashboard />} />
+          <Route path="/dashboard" element={<VisitorDashboard />} />
+          <Route path="/pengunjung" element={<VisitorDashboard />} />
           <Route 
             path="/kasir" 
             element={
@@ -105,15 +118,7 @@ function AppContent() {
         </Routes>
       </main>
 
-      {!isStaffRoute && <Footer onOpenBooking={handleOpenBooking} />}
-
-      {/* Booking Form Overlay */}
-      <BookingModal 
-        isOpen={isBookingOpen} 
-        onClose={handleCloseBooking} 
-        selectedTicket={selectedTicket}
-        onSubmit={handleSubmitBooking}
-      />
+      {!isFullLayoutRoute && <Footer onOpenBooking={handleOpenBooking} />}
 
       {/* Success Confirmation Overlay */}
       <SuccessModal 
