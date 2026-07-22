@@ -657,11 +657,47 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                                             <p>{activeTicketData.date}</p>
                                         </div>
                                     </div>
-
-                                    <div style={{ backgroundColor: '#fffbebf', border: '1px solid #fef3c7', padding: '10px', borderRadius: '10px', margin: '14px 0', fontSize: '0.78rem', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: '1.1rem' }}></i>
-                                        <span>Konfirmasi pemesanan telah dikirim ke WA Admin. E-Tiket PDF resmi akan dikirimkan oleh Admin.</span>
+                                    <div style={{ backgroundColor: '#fffbe3', border: '1px solid #fef3c7', padding: '12px 14px', borderRadius: '12px', margin: '14px 0 10px 0', fontSize: '0.8rem', color: '#92400e', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: '1.2rem', flexShrink: 0 }}></i>
+                                        <span>Klik tombol hijau di bawah untuk konfirmasi via WhatsApp Admin &amp; ambil E-Tiket PDF resmi.</span>
                                     </div>
+
+                                    {/* Direct WhatsApp Confirmation Button in Tiket Saya Card */}
+                                    <button
+                                        className="btn-wa-ticket-confirm"
+                                        onClick={() => {
+                                            const adminWaNumber = '6281234567890';
+                                            let rentalsText = '';
+                                            if (activeTicketData.rentals?.ban > 0) rentalsText += `\n• Sewa Ban: ${activeTicketData.rentals.ban}x`;
+                                            if (activeTicketData.rentals?.sepeda > 0) rentalsText += `\n• Sewa Sepeda Air: ${activeTicketData.rentals.sepeda}x`;
+                                            if (activeTicketData.rentals?.gazebo > 0) rentalsText += `\n• Sewa Gazebo: ${activeTicketData.rentals.gazebo}x`;
+
+                                            const waMessage = `Halo Admin Waterboom Cijoho Indah! 👋\nSaya ingin konfirmasi pesanan Tiket Online:\n\n📌 *Kode Booking:* ${activeTicketData.code}\n👤 *Nama Pemesan:* ${activeTicketData.name}\n📱 *No. WA:* ${activeTicketData.phone || '-'}\n📅 *Tgl Kunjungan:* ${activeTicketData.date}\n🎟️ *Detail Tiket:* ${activeTicketData.type} (${activeTicketData.qty} Orang)${rentalsText ? `\n🚣 *Tambahan Sewa:*${rentalsText}` : ''}\n💰 *Total Pembayaran:* Rp ${activeTicketData.total.toLocaleString('id-ID')}\n\nMohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp ini. Terima kasih!`;
+
+                                            window.open(`https://wa.me/${adminWaNumber}?text=${encodeURIComponent(waMessage)}`, '_blank');
+                                        }}
+                                        style={{
+                                            margin: '6px 0 14px 0',
+                                            width: '100%',
+                                            backgroundColor: '#25D366',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '12px 16px',
+                                            borderRadius: '12px',
+                                            fontSize: '0.88rem',
+                                            fontWeight: 800,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        <i className="fa-brands fa-whatsapp" style={{ fontSize: '1.2rem' }}></i>
+                                        Chat WA Admin untuk E-Tiket PDF
+                                    </button>
 
                                     <div className="ticket-barcode-container">
                                         <div className="mock-barcode">
@@ -682,7 +718,7 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                     </div>
                 )}
 
-                {/* 3. RIWAYAT TAB */}
+                {/* 3. RIWAYAT TAB (Murni Informasi Chat Admin tanpa tombol WA berulang) */}
                 {activeTab === 'riwayat' && (
                     <div className="app-tab-pane fade-in" style={{ padding: '16px 12px' }}>
                         <h3 className="tab-title" style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f2942', marginBottom: '14px' }}>Riwayat Transaksi Langsung</h3>
@@ -700,43 +736,6 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                                         <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>Pemesanan: {item.name}</span>
                                         <strong style={{ fontSize: '0.95rem', color: '#2563eb', fontWeight: 900 }}>Rp {item.total.toLocaleString('id-ID')}</strong>
                                     </div>
-
-                                    {/* Action Button: Re-send / Confirm to Admin WA */}
-                                    <button
-                                        className="btn-rewa-confirm"
-                                        onClick={() => {
-                                            const adminWaNumber = '6281234567890';
-                                            let rentalsText = '';
-                                            if (item.details?.rentals?.ban > 0) rentalsText += `\n• Sewa Ban: ${item.details.rentals.ban}x`;
-                                            if (item.details?.rentals?.sepeda > 0) rentalsText += `\n• Sewa Sepeda Air: ${item.details.rentals.sepeda}x`;
-                                            if (item.details?.rentals?.gazebo > 0) rentalsText += `\n• Sewa Gazebo: ${item.details.rentals.gazebo}x`;
-
-                                            const waMessage = `Halo Admin Waterboom Cijoho Indah! 👋\nSaya ingin konfirmasi pesanan Tiket Online:\n\n📌 *Kode Booking:* ${item.code}\n👤 *Nama Pemesan:* ${item.name}\n📱 *No. WA:* ${item.phone || item.details?.phone || '-'}\n📅 *Tgl Kunjungan:* ${item.date}\n🎟️ *Detail Tiket:* ${item.type} (${item.qty || item.details?.qty || 1} Orang)${rentalsText ? `\n🚣 *Tambahan Sewa:*${rentalsText}` : ''}\n💰 *Total Pembayaran:* Rp ${item.total.toLocaleString('id-ID')}\n\nMohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp ini. Terima kasih!`;
-
-                                            window.open(`https://wa.me/${adminWaNumber}?text=${encodeURIComponent(waMessage)}`, '_blank');
-                                        }}
-                                        style={{
-                                            marginTop: '12px',
-                                            width: '100%',
-                                            backgroundColor: '#25D366',
-                                            color: 'white',
-                                            border: 'none',
-                                            padding: '10px 14px',
-                                            borderRadius: '10px',
-                                            fontSize: '0.84rem',
-                                            fontWeight: 800,
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '8px',
-                                            boxShadow: '0 3px 10px rgba(37, 211, 102, 0.25)',
-                                            transition: 'all 0.2s ease'
-                                        }}
-                                    >
-                                        <i className="fa-brands fa-whatsapp" style={{ fontSize: '1.1rem' }}></i>
-                                        Konfirmasi ke WA Admin
-                                    </button>
                                 </div>
                             ))}
                         </div>
