@@ -159,7 +159,7 @@ export default function KontakPage() {
                                 border: '1px solid var(--color-border)'
                             }}>
                                 <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--color-primary)', marginBottom: '16px' }}>
-                                    📍 Alamat & Peta Lokasi
+                                    Alamat & Peta Lokasi
                                 </h2>
                                 <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', lineHeight: 1.5, marginBottom: '20px' }}>
                                     Jl. Cijoho, Tasikmalaya, Jawa Barat, Indonesia

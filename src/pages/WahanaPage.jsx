@@ -35,7 +35,7 @@ export default function WahanaPage() {
         {
             id: 3,
             title: 'Kids Waterplay',
-            desc: 'Area bermain air interaktif yang aman dan menyenangkan khusus untuk anak.',
+            desc: 'Area bermain interaktif yang aman dan menyenangkan khusus untuk anak.',
             icon: 'assets/kids.png?v=1.1',
             bgGradient: 'linear-gradient(135deg, #92c83e 0%, #7eb32b 100%)',
             details: [
@@ -50,7 +50,7 @@ export default function WahanaPage() {
         {
             id: 4,
             title: 'Gazebo & Rest Area',
-            desc: 'Area gazebo yang nyaman untuk beristirahat sambil menikmati suasana tropis.',
+            desc: 'Area yang nyaman untuk beristirahat sambil menikmati suasana.',
             icon: 'assets/saung.png.png?v=1.1',
             bgGradient: 'linear-gradient(135deg, #e8f1fc 0%, #d4e5f9 100%)',
             textColor: '#052049',
@@ -86,15 +86,14 @@ export default function WahanaPage() {
                 {/* List of Wahanas */}
                 <div style={{ marginTop: '20px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '50px' }}>
-                        {wahanas.map((wahana, index) => {
-                            const isEven = index % 2 === 0;
+                        {wahanas.map((wahana) => {
                             const isLight = wahana.textColor === '#052049';
                             return (
                                 <div
                                     key={wahana.id}
                                     style={{
                                         display: 'grid',
-                                        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
                                         backgroundColor: 'white',
                                         borderRadius: '24px',
                                         boxShadow: 'var(--shadow-soft)',
@@ -112,7 +111,6 @@ export default function WahanaPage() {
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         textAlign: 'center',
-                                        order: isEven ? 0 : 1
                                     }}>
                                         <div style={{
                                             backgroundColor: 'white',
