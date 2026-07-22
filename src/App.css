@@ -9329,9 +9329,13 @@ body,
 }
 
 .visitor-view-content {
-    padding-top: 2px !important;
-    margin-top: 0 !important;
+    padding-top: 0 !important;
+    margin-top: -6px !important;
     overflow: visible !important;
     height: auto !important;
     padding-bottom: 40px !important;
+}
+
+.visitor-view-content .hero-slider-track-container {
+    margin-top: 0 !important;
 }

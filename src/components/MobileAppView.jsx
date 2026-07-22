@@ -391,7 +391,7 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
             )}
 
             {/* Core Tab Content Container */}
-            <div className={`mobile-app-content ${!isCashierMode ? 'visitor-view-content' : ''}`} style={{ paddingTop: isCashierMode ? '74px' : '2px', paddingLeft: '12px', paddingRight: '12px', marginTop: 0 }}>
+            <div className={`mobile-app-content ${!isCashierMode ? 'visitor-view-content' : ''}`} style={{ paddingTop: isCashierMode ? '74px' : '0px', paddingLeft: '12px', paddingRight: '12px', marginTop: 0 }}>
                 {/* 1. BERANDA / BOOKING TAB */}
                 {activeTab === 'beranda' && (
                     <div className="app-tab-pane fade-in" style={{ paddingTop: 0, marginTop: 0 }}>
@@ -402,7 +402,7 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                                 overflow: 'hidden', 
                                 borderRadius: '16px', 
                                 position: 'relative', 
-                                margin: '2px 0 0 0', 
+                                margin: '0', 
                                 boxShadow: '0 6px 20px rgba(12, 41, 74, 0.08)',
                                 height: '140px',
                                 backgroundImage: `linear-gradient(to top, rgba(12, 41, 74, 0.92) 0%, rgba(12, 41, 74, 0.35) 60%, transparent 100%), url('${sliderSlides[currentSlide].img}')`,
