@@ -92,26 +92,14 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
 
     const [historyList, setHistoryList] = useState(() => {
         const saved = localStorage.getItem('waterboom_sales_history');
-        if (saved) return JSON.parse(saved);
-        return [
-            {
-                code: 'WCI-823902',
-                date: '22 Juli 2026',
-                name: 'Pengunjung Cijoho',
-                phone: '081234567890',
-                type: 'Tiket Reguler',
-                qty: 2,
-                total: 65000,
-                status: 'Menunggu PDF WA Admin',
-                details: {
-                    ticketTypeKey: 'reguler',
-                    qty: 2,
-                    subtotal: 40000,
-                    rentals: { ban: 1, sepeda: 0, gazebo: 1 },
-                    total: 65000
-                }
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch(e) {
+                return [];
             }
-        ];
+        }
+        return [];
     });
 
     // Slider state for Hero Card
@@ -723,21 +711,29 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                     <div className="app-tab-pane fade-in" style={{ padding: '16px 12px' }}>
                         <h3 className="tab-title" style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f2942', marginBottom: '14px' }}>Riwayat Transaksi Langsung</h3>
                         <div className="history-list-container">
-                            {historyList.map((item, idx) => (
-                                <div key={idx} className="history-item-card" style={{ marginBottom: '14px', padding: '14px', borderRadius: '16px', border: '1.5px solid #e2e8f0', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(12, 41, 74, 0.04)' }}>
-                                    <div className="history-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                        <div>
-                                            <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 900, color: '#0f2942' }}>{item.type}</h4>
-                                            <small style={{ color: '#64748b', fontSize: '0.78rem' }}>{item.date} &bull; {item.code}</small>
-                                        </div>
-                                        <span className="status-badge used" style={{ backgroundColor: '#fef3c7', color: '#92400e', padding: '4px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 800 }}>{item.status}</span>
-                                    </div>
-                                    <div className="history-card-details" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px dashed #e2e8f0' }}>
-                                        <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>Pemesanan: {item.name}</span>
-                                        <strong style={{ fontSize: '0.95rem', color: '#2563eb', fontWeight: 900 }}>Rp {item.total.toLocaleString('id-ID')}</strong>
-                                    </div>
+                            {historyList.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '40px 16px', color: '#94a3b8' }}>
+                                    <i className="fa-solid fa-receipt" style={{ fontSize: '2.5rem', marginBottom: '12px', opacity: 0.6 }}></i>
+                                    <p style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem', color: '#64748b' }}>Belum ada riwayat transaksi</p>
+                                    <small style={{ fontSize: '0.78rem' }}>Transaksi tiket &amp; sewa akan muncul di sini</small>
                                 </div>
-                            ))}
+                            ) : (
+                                historyList.map((item, idx) => (
+                                    <div key={idx} className="history-item-card" style={{ marginBottom: '14px', padding: '14px', borderRadius: '16px', border: '1.5px solid #e2e8f0', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(12, 41, 74, 0.04)' }}>
+                                        <div className="history-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                            <div>
+                                                <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 900, color: '#0f2942' }}>{item.type}</h4>
+                                                <small style={{ color: '#64748b', fontSize: '0.78rem' }}>{item.date} &bull; {item.code}</small>
+                                            </div>
+                                            <span className="status-badge used" style={{ backgroundColor: '#fef3c7', color: '#92400e', padding: '4px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 800 }}>{item.status}</span>
+                                        </div>
+                                        <div className="history-card-details" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px dashed #e2e8f0' }}>
+                                            <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>Pemesanan: {item.name}</span>
+                                            <strong style={{ fontSize: '0.95rem', color: '#2563eb', fontWeight: 900 }}>Rp {item.total.toLocaleString('id-ID')}</strong>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 )}
