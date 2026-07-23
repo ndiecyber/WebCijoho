@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { supabase } from '../supabase'; // pastikan path sesuai (komponen ada di components/)
 
 export default function MobileAppView({ onOpenBooking, isCashierMode = false }) {
     const [activeTab, setActiveTab] = useState('beranda');
@@ -42,13 +43,84 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
     const [cashReceived, setCashReceived] = useState('');
     const [cashChange, setCashChange] = useState(0);
 
-    const handleConfirmOfflinePOS = (e) => {
+    // --- Fungsi bantu untuk menyimpan transaksi ke Supabase ---
+    const saveTransactionToSupabase = async (bookingCode, items, paymentMethod, cashierName, customerName, status = 'lunas') => {
+        try {
+            const rows = items.map(item => ({
+                booking_code: bookingCode,
+                ticket_type: item.ticket_type,
+                quantity: item.quantity,
+                total_price: item.total_price,
+                customer_name: customerName || 'Pengunjung',
+                status: status,
+                payment_method: paymentMethod,
+                cashier_name: cashierName || 'Petugas Kasir'
+            }));
+
+            const { error } = await supabase.from('transactions').insert(rows);
+            if (error) {
+                console.error('Gagal menyimpan ke Supabase:', error);
+                return false;
+            }
+            return true;
+        } catch (err) {
+            console.error('Error Supabase:', err);
+            return false;
+        }
+    };
+
+    // --- OFFICE POS: handleConfirmOfflinePOS (MODIFIED) ---
+    const handleConfirmOfflinePOS = async (e) => {
         e.preventDefault();
         const receiptCode = 'STR-' + Math.floor(100000 + Math.random() * 900000);
         const typeName = selectedTicket === 'reguler' ? 'Tiket Reguler' : selectedTicket === 'rombongan' ? 'Tiket Rombongan' : 'Kursus Renang';
         const paidAmount = paymentMethod === 'cash' ? (parseInt(cashReceived) || grandTotal) : grandTotal;
         const change = paidAmount - grandTotal;
 
+        // Siapkan items untuk Supabase
+        const items = [];
+        // Tiket masuk
+        items.push({
+            ticket_type: selectedTicket, // 'reguler', 'rombongan', 'kursus'
+            quantity: ticketQty,
+            total_price: subtotal
+        });
+        // Sewa-sewa
+        if (sewaBan > 0) {
+            items.push({
+                ticket_type: 'ban',
+                quantity: sewaBan,
+                total_price: sewaBan * PRICES.rentals.ban
+            });
+        }
+        if (sewaSepeda > 0) {
+            items.push({
+                ticket_type: 'angsa', // mewakili sepeda air
+                quantity: sewaSepeda,
+                total_price: sewaSepeda * PRICES.rentals.sepeda
+            });
+        }
+        if (sewaGazebo > 0) {
+            items.push({
+                ticket_type: 'gazebo',
+                quantity: sewaGazebo,
+                total_price: sewaGazebo * PRICES.rentals.gazebo
+            });
+        }
+
+        const paymentMethodStr = paymentMethod === 'cash' ? 'tunai' : 'qris';
+
+        // Simpan ke Supabase (async, tidak perlu tunggu untuk lanjut)
+        saveTransactionToSupabase(
+            receiptCode,
+            items,
+            paymentMethodStr,
+            'Petugas Kasir 1', // bisa diganti sesuai login nanti
+            'Pengunjung Offline',
+            'lunas'
+        );
+
+        // Simpan juga ke localStorage untuk history lokal
         const newReceipt = {
             code: receiptCode,
             date: visitDate,
@@ -60,7 +132,7 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
             subtotal: subtotal,
             rentals: { ban: sewaBan, sepeda: sewaSepeda, gazebo: sewaGazebo },
             total: grandTotal,
-            paymentMethod: paymentMethod === 'cash' ? 'Tunai (Cash)' : 'QRIS / EDC',
+            paymentMethod: paymentMethodStr === 'tunai' ? 'Tunai (Cash)' : 'QRIS / EDC',
             paidAmount: paidAmount,
             change: change >= 0 ? change : 0,
             status: 'Lunas - Struk Loket Fisik'
@@ -75,168 +147,8 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
         setShowOfflineReceiptModal(true);
     };
 
-    // Purchase history & active tickets
-    const [activeTicketData, setActiveTicketData] = useState({
-        code: 'WCI-823902',
-        date: '22 Juli 2026',
-        name: 'Pengunjung Cijoho',
-        phone: '081234567890',
-        type: 'Tiket Reguler',
-        ticketTypeKey: 'reguler',
-        qty: 2,
-        ticketPrice: 20000,
-        subtotal: 40000,
-        rentals: { ban: 1, sepeda: 0, gazebo: 1 },
-        total: 65000
-    });
-
-    const [historyList, setHistoryList] = useState(() => {
-        const saved = localStorage.getItem('waterboom_sales_history');
-        if (saved) return JSON.parse(saved);
-        return [
-            {
-                code: 'WCI-823902',
-                date: '22 Juli 2026',
-                name: 'Pengunjung Cijoho',
-                phone: '081234567890',
-                type: 'Tiket Reguler',
-                qty: 2,
-                total: 65000,
-                status: 'Menunggu PDF WA Admin',
-                details: {
-                    ticketTypeKey: 'reguler',
-                    qty: 2,
-                    subtotal: 40000,
-                    rentals: { ban: 1, sepeda: 0, gazebo: 1 },
-                    total: 65000
-                }
-            }
-        ];
-    });
-
-    // Slider state for Hero Card
-    const sliderSlides = [
-        {
-            img: 'assets/dash.jpeg?v=1.1',
-            title: 'Selamat Datang!',
-            subtitle: 'Nikmati liburan seru di Waterboom Cijoho Indah'
-        },
-        {
-            img: 'assets/1.png?v=1.1',
-            title: 'Wahana Air & Kolam Renang',
-            subtitle: 'Seluncuran raksasa & saung gazebo keluarga'
-        },
-        {
-            img: 'assets/bebek.png?v=1.1',
-            title: 'Sewa Sepeda Air & Wahana Bebek',
-            subtitle: 'Pengalaman seru dan asyik untuk buah hati'
-        }
-    ];
-    const [currentSlide, setCurrentSlide] = useState(0);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentSlide(prev => (prev + 1) % sliderSlides.length);
-        }, 3500);
-        return () => clearInterval(interval);
-    }, [sliderSlides.length]);
-
-    // Price State synchronized with localStorage
-    const [PRICES, setPRICES] = useState(() => {
-        const saved = localStorage.getItem('waterboom_prices');
-        if (saved) return JSON.parse(saved);
-        return {
-            tickets: {
-                reguler: 20000,
-                rombongan: 17000,
-                kursus: 15000
-            },
-            rentals: {
-                ban: 5000,
-                sepeda: 5000,
-                gazebo: 20000
-            }
-        };
-    });
-
-    useEffect(() => {
-        const handleStorageChange = () => {
-            const saved = localStorage.getItem('waterboom_prices');
-            if (saved) {
-                setPRICES(JSON.parse(saved));
-            }
-        };
-        window.addEventListener('storage', handleStorageChange);
-        window.addEventListener('focus', handleStorageChange);
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('focus', handleStorageChange);
-        };
-    }, []);
-
-    // Calculate subtotal and grand total
-    const ticketPrice = PRICES.tickets[selectedTicket] || 20000;
-    const subtotal = ticketPrice * ticketQty;
-    const rentalsTotal = (sewaBan * PRICES.rentals.ban) + (sewaSepeda * PRICES.rentals.sepeda) + (sewaGazebo * PRICES.rentals.gazebo);
-    const grandTotal = subtotal + rentalsTotal;
-
-    // Trigger Payment / Checkout Modal (Offline vs Online)
-    const handlePaymentClick = () => {
-        if (ticketQty <= 0) {
-            alert('Silakan tentukan jumlah tiket terlebih dahulu!');
-            return;
-        }
-
-        if (posMode === 'offline') {
-            setCashReceived(grandTotal.toString());
-            setCashChange(0);
-            setShowOfflinePOSModal(true);
-        } else {
-            setShowWACheckoutModal(true);
-        }
-    };
-
-    // Cashier direct checkout
-    const processCashierPayment = () => {
-        const bookingCode = 'WCI-' + Math.floor(100000 + Math.random() * 900000);
-        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-
-        const newTicket = {
-            code: bookingCode,
-            date: today,
-            name: 'Pengunjung Kasir',
-            phone: '-',
-            type: selectedTicket === 'reguler' ? 'Tiket Reguler' : selectedTicket === 'rombongan' ? 'Tiket Rombongan' : 'Kursus Renang',
-            ticketTypeKey: selectedTicket,
-            qty: ticketQty,
-            ticketPrice: ticketPrice,
-            subtotal: subtotal,
-            rentals: { ban: sewaBan, sepeda: sewaSepeda, gazebo: sewaGazebo },
-            rentalsPrice: { ban: PRICES.rentals.ban, sepeda: PRICES.rentals.sepeda, gazebo: PRICES.rentals.gazebo },
-            total: grandTotal
-        };
-
-        const updatedList = [{
-            code: bookingCode,
-            date: today,
-            type: newTicket.type,
-            qty: ticketQty,
-            total: grandTotal,
-            status: 'Lunas',
-            details: newTicket
-        }, ...historyList];
-
-        setHistoryList(updatedList);
-        localStorage.setItem('waterboom_sales_history', JSON.stringify(updatedList));
-
-        setReceiptData(newTicket);
-        setCashReceived('');
-        setCashChange(0);
-        setShowReceipt(true);
-    };
-
-    // Confirm Order & Open WhatsApp Admin for PDF Ticket
-    const handleConfirmWhatsAppOrder = (e) => {
+    // --- WHATSAPP ONLINE ORDER (MODIFIED) ---
+    const handleConfirmWhatsAppOrder = async (e) => {
         e.preventDefault();
 
         if (!buyerName.trim()) {
@@ -247,6 +159,46 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
         const bookingCode = 'WCI-' + Math.floor(100000 + Math.random() * 900000);
         const typeName = selectedTicket === 'reguler' ? 'Tiket Reguler' : selectedTicket === 'rombongan' ? 'Tiket Rombongan' : 'Kursus Renang';
 
+        // Items untuk Supabase
+        const items = [];
+        items.push({
+            ticket_type: selectedTicket,
+            quantity: ticketQty,
+            total_price: subtotal
+        });
+        if (sewaBan > 0) {
+            items.push({
+                ticket_type: 'ban',
+                quantity: sewaBan,
+                total_price: sewaBan * PRICES.rentals.ban
+            });
+        }
+        if (sewaSepeda > 0) {
+            items.push({
+                ticket_type: 'angsa',
+                quantity: sewaSepeda,
+                total_price: sewaSepeda * PRICES.rentals.sepeda
+            });
+        }
+        if (sewaGazebo > 0) {
+            items.push({
+                ticket_type: 'gazebo',
+                quantity: sewaGazebo,
+                total_price: sewaGazebo * PRICES.rentals.gazebo
+            });
+        }
+
+        // Simpan ke Supabase dengan status 'pending' (menunggu PDF)
+        saveTransactionToSupabase(
+            bookingCode,
+            items,
+            'transfer', // metode pembayaran dianggap transfer karena online
+            'Admin Online',
+            buyerName,
+            'pending'
+        );
+
+        // WhatsApp message
         let rentalsTextArray = [];
         if (sewaBan > 0) rentalsTextArray.push(`• ${sewaBan}x Sewa Ban (Rp ${(sewaBan * PRICES.rentals.ban).toLocaleString('id-ID')})`);
         if (sewaSepeda > 0) rentalsTextArray.push(`• ${sewaSepeda}x Sewa Sepeda Air (Rp ${(sewaSepeda * PRICES.rentals.sepeda).toLocaleString('id-ID')})`);
@@ -309,6 +261,168 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
         setActiveTab('tiket');
     };
 
+    // Purchase history & active tickets (STATE TETAP SEPERTI SEMULA)
+    const [activeTicketData, setActiveTicketData] = useState({
+        code: 'WCI-823902',
+        date: '22 Juli 2026',
+        name: 'Pengunjung Cijoho',
+        phone: '6281234567890',
+        type: 'Tiket Reguler',
+        ticketTypeKey: 'reguler',
+        qty: 2,
+        ticketPrice: 20000,
+        subtotal: 40000,
+        rentals: { ban: 1, sepeda: 0, gazebo: 1 },
+        total: 65000
+    });
+
+    const [historyList, setHistoryList] = useState(() => {
+        const saved = localStorage.getItem('waterboom_sales_history');
+        if (saved) return JSON.parse(saved);
+        return [
+            {
+                code: 'WCI-823902',
+                date: '22 Juli 2026',
+                name: 'Pengunjung Cijoho',
+                phone: '081234567890',
+                type: 'Tiket Reguler',
+                qty: 2,
+                total: 65000,
+                status: 'Menunggu PDF WA Admin',
+                details: {
+                    ticketTypeKey: 'reguler',
+                    qty: 2,
+                    subtotal: 40000,
+                    rentals: { ban: 1, sepeda: 0, gazebo: 1 },
+                    total: 65000
+                }
+            }
+        ];
+    });
+
+    // Slider state for Hero Card (TIDAK BERUBAH)
+    const sliderSlides = [
+        {
+            img: 'assets/dash.jpeg?v=1.1',
+            title: 'Selamat Datang!',
+            subtitle: 'Nikmati liburan seru di Waterboom Cijoho Indah'
+        },
+        {
+            img: 'assets/1.png?v=1.1',
+            title: 'Wahana Air & Kolam Renang',
+            subtitle: 'Seluncuran raksasa & saung gazebo keluarga'
+        },
+        {
+            img: 'assets/bebek.png?v=1.1',
+            title: 'Sewa Sepeda Air & Wahana Bebek',
+            subtitle: 'Pengalaman seru dan asyik untuk buah hati'
+        }
+    ];
+    const [currentSlide, setCurrentSlide] = useState(0);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentSlide(prev => (prev + 1) % sliderSlides.length);
+        }, 3500);
+        return () => clearInterval(interval);
+    }, [sliderSlides.length]);
+
+    // Price State synchronized with localStorage (TIDAK BERUBAH)
+    const [PRICES, setPRICES] = useState(() => {
+        const saved = localStorage.getItem('waterboom_prices');
+        if (saved) return JSON.parse(saved);
+        return {
+            tickets: {
+                reguler: 20000,
+                rombongan: 17000,
+                kursus: 15000
+            },
+            rentals: {
+                ban: 5000,
+                sepeda: 5000,
+                gazebo: 20000
+            }
+        };
+    });
+
+    useEffect(() => {
+        const handleStorageChange = () => {
+            const saved = localStorage.getItem('waterboom_prices');
+            if (saved) {
+                setPRICES(JSON.parse(saved));
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('focus', handleStorageChange);
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('focus', handleStorageChange);
+        };
+    }, []);
+
+    // Calculate subtotal and grand total
+    const ticketPrice = PRICES.tickets[selectedTicket] || 20000;
+    const subtotal = ticketPrice * ticketQty;
+    const rentalsTotal = (sewaBan * PRICES.rentals.ban) + (sewaSepeda * PRICES.rentals.sepeda) + (sewaGazebo * PRICES.rentals.gazebo);
+    const grandTotal = subtotal + rentalsTotal;
+
+    // Trigger Payment / Checkout Modal (Offline vs Online)
+    const handlePaymentClick = () => {
+        if (ticketQty <= 0) {
+            alert('Silakan tentukan jumlah tiket terlebih dahulu!');
+            return;
+        }
+
+        if (posMode === 'offline') {
+            setCashReceived(grandTotal.toString());
+            setCashChange(0);
+            setShowOfflinePOSModal(true);
+        } else {
+            setShowWACheckoutModal(true);
+        }
+    };
+
+    // Cashier direct checkout (TIDAK DIPAKAI LAGI, tapi dibiarkan agar tidak error)
+    const processCashierPayment = () => {
+        const bookingCode = 'WCI-' + Math.floor(100000 + Math.random() * 900000);
+        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        const newTicket = {
+            code: bookingCode,
+            date: today,
+            name: 'Pengunjung Kasir',
+            phone: '-',
+            type: selectedTicket === 'reguler' ? 'Tiket Reguler' : selectedTicket === 'rombongan' ? 'Tiket Rombongan' : 'Kursus Renang',
+            ticketTypeKey: selectedTicket,
+            qty: ticketQty,
+            ticketPrice: ticketPrice,
+            subtotal: subtotal,
+            rentals: { ban: sewaBan, sepeda: sewaSepeda, gazebo: sewaGazebo },
+            rentalsPrice: { ban: PRICES.rentals.ban, sepeda: PRICES.rentals.sepeda, gazebo: PRICES.rentals.gazebo },
+            total: grandTotal
+        };
+
+        const updatedList = [{
+            code: bookingCode,
+            date: today,
+            type: newTicket.type,
+            qty: ticketQty,
+            total: grandTotal,
+            status: 'Lunas',
+            details: newTicket
+        }, ...historyList];
+
+        setHistoryList(updatedList);
+        localStorage.setItem('waterboom_sales_history', JSON.stringify(updatedList));
+
+        setReceiptData(newTicket);
+        setCashReceived('');
+        setCashChange(0);
+        setShowReceipt(true);
+    };
+
+    // --- SISA KODE JSX TIDAK BERUBAH SAMA SEKALI ---
+    // (Ikuti seluruh kode JSX yang sudah ada, tidak ada pemotongan)
     return (
         <div className="mobile-app-wrapper">
             {/* Top App Header (Hanya Tampil di Mode Kasir, Disembunyikan untuk Pemesanan Tiket Online) */}
@@ -808,7 +922,7 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
 
                         <form onSubmit={handleConfirmWhatsAppOrder} className="v-modal-body" style={{ padding: '20px' }}>
                             <p style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '16px' }}>
-                                Masukkan nama & nomor WhatsApp Anda. Konfirmasi pemesanan akan dikirim ke WhatsApp Admin dan Admin akan mengirimkan **Tiket Resmi (PDF)** ke nomor Anda.
+                                Masukkan nama & nomor WhatsApp Anda. Konfirmasi pemesanan akan dikirim ke WhatsApp Admin dan Admin akan mengirimkan Tiket Resmi (PDF) ke nomor Anda.
                             </p>
 
                             <div className="input-group-field" style={{ marginBottom: '14px' }}>
