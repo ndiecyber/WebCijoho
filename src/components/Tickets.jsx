@@ -147,7 +147,7 @@ export default function Tickets({ onOpenBooking }) {
                             Dapatkan harga spesial<br />untuk grup dan paket.
                         </p>
                         <div className="ticket-divider"></div>
-                        <a href="https://wa.me/628123456789?text=Halo%20Waterboom%20Cijoho%20Indah%2C%20saya%20tertarik%20dengan%20paket%20rombongan%20grup.%20Bisa%20berikan%20informasi%20lebih%20lanjut%20mengenai%20diskon%20dan%20ketentuannya%3F" target="_blank" rel="noreferrer" className="btn btn-outline-blue btn-pill btn-full" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', fontWeight: 700 }}>
+                        <a href="https://wa.me/6281234567890?text=Halo%20Waterboom%20Cijoho%20Indah%2C%20saya%20tertarik%20dengan%20paket%20rombongan%20grup.%20Bisa%20berikan%20informasi%20lebih%20lanjut%20mengenai%20diskon%20dan%20ketentuannya%3F" target="_blank" rel="noreferrer" className="btn btn-outline-blue btn-pill btn-full" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', fontWeight: 700 }}>
                             HUBUNGI KAMI <i className="fa-solid fa-arrow-right-long"></i>
                         </a>
                         

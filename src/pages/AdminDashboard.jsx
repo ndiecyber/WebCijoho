@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabase'; // Pastikan path ini sesuai dengan struktur folder Anda
 
 export default function AdminDashboard() {
     const [history, setHistory] = useState([]);
@@ -115,80 +116,129 @@ export default function AdminDashboard() {
 
     const navigate = useNavigate();
 
+    // --- Helper: format tipe tiket menjadi label yang lebih mudah dibaca ---
+    const mapTicketTypeLabel = (type) => {
+        switch (type) {
+            case 'reguler': return 'Tiket Reguler';
+            case 'rombongan': return 'Tiket Rombongan';
+            case 'kursus': return 'Kursus Renang';
+            case 'ban': return 'Sewa Ban';
+            case 'angsa': return 'Sewa Angsa';
+            case 'gazebo': return 'Sewa Gazebo';
+            default: return type;
+        }
+    };
+
+    const mapPaymentMethodLabel = (method) => {
+        switch (method) {
+            case 'tunai': return 'Tunai';
+            case 'qris': return 'QRIS';
+            case 'transfer': return 'Transfer';
+            default: return method || '-';
+        }
+    };
+
+    // --- Fetch transaksi dari Supabase dan transformasikan ke format history ---
+    const fetchTransactions = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('transactions')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Gagal mengambil transaksi:', error);
+                // fallback ke localStorage jika ada
+                const savedHistory = localStorage.getItem('waterboom_sales_history');
+                if (savedHistory) {
+                    setHistory(JSON.parse(savedHistory));
+                }
+                return;
+            }
+
+            // Kelompokkan berdasarkan booking_code
+            const grouped = {};
+            data.forEach(row => {
+                const code = row.booking_code;
+                if (!grouped[code]) {
+                    grouped[code] = {
+                        code,
+                        date: new Date(row.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) + ' ' + new Date(row.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                        items: [],
+                        payment_method: row.payment_method,
+                        cashier_name: row.cashier_name,
+                        customer_name: row.customer_name
+                    };
+                }
+                grouped[code].items.push({
+                    ticket_type: row.ticket_type,
+                    quantity: row.quantity,
+                    total_price: row.total_price,
+                    product: mapTicketTypeLabel(row.ticket_type)
+                });
+            });
+
+            // Ubah ke array history (seperti format sebelumnya)
+            const newHistory = [];
+            Object.values(grouped).forEach(grp => {
+                // Buat satu entri untuk tiket masuk (jika ada item tiket)
+                const ticketItems = grp.items.filter(it => ['reguler', 'rombongan', 'kursus'].includes(it.ticket_type));
+                const rentalItems = grp.items.filter(it => ['ban', 'angsa', 'gazebo'].includes(it.ticket_type));
+
+                // Gabungkan tiket masuk dalam satu entri (jika ada)
+                if (ticketItems.length > 0) {
+                    const totalTickets = ticketItems.reduce((s, it) => s + it.quantity, 0);
+                    const totalPrice = ticketItems.reduce((s, it) => s + it.total_price, 0);
+                    newHistory.push({
+                        code: grp.code,
+                        date: grp.date,
+                        type: 'Tiket Masuk',
+                        channel: grp.payment_method === 'transfer' ? 'Online' : 'Offline',
+                        product: ticketItems.map(it => it.product).join(', '),
+                        qty: totalTickets,
+                        total: totalPrice,
+                        method: mapPaymentMethodLabel(grp.payment_method),
+                        status: 'Lunas',
+                        details: { 
+                            ticketTypeKey: ticketItems[0]?.ticket_type || 'reguler',
+                            rentals: {
+                                ban: rentalItems.filter(r => r.ticket_type === 'ban').reduce((s, r) => s + r.quantity, 0),
+                                sepeda: rentalItems.filter(r => r.ticket_type === 'angsa').reduce((s, r) => s + r.quantity, 0),
+                                gazebo: rentalItems.filter(r => r.ticket_type === 'gazebo').reduce((s, r) => s + r.quantity, 0)
+                            }
+                        }
+                    });
+                }
+
+                // Setiap item sewa menjadi entri sendiri-sendiri
+                rentalItems.forEach(rit => {
+                    newHistory.push({
+                        code: grp.code,
+                        date: grp.date,
+                        type: 'Sewa ' + (rit.ticket_type === 'ban' ? 'Ban' : rit.ticket_type === 'angsa' ? 'Angsa' : 'Gazebo'),
+                        channel: grp.payment_method === 'transfer' ? 'Online' : 'Offline',
+                        product: rit.product,
+                        qty: rit.quantity,
+                        total: rit.total_price,
+                        method: mapPaymentMethodLabel(grp.payment_method),
+                        status: 'Lunas',
+                        details: null
+                    });
+                });
+            });
+
+            setHistory(newHistory);
+            localStorage.setItem('waterboom_sales_history', JSON.stringify(newHistory));
+        } catch (err) {
+            console.error('Error fetching transactions:', err);
+        }
+    };
+
     // Load initial data and localStorage configurations
     useEffect(() => {
         const loadAllData = () => {
-            // 1. Load Sales History
-            const savedHistory = localStorage.getItem('waterboom_sales_history');
-            let historyData = [];
-            if (savedHistory) {
-                historyData = JSON.parse(savedHistory);
-            } else {
-                historyData = [
-                    {
-                        code: 'TRX-250521-1024',
-                        date: '21 Mei 2025 14:32',
-                        type: 'Tiket Masuk',
-                        channel: 'Offline',
-                        product: 'Tiket Reguler',
-                        qty: 3,
-                        total: 60000,
-                        method: 'Tunai',
-                        status: 'Lunas',
-                        details: { ticketTypeKey: 'reguler', rentals: { ban: 0, sepeda: 0, gazebo: 0 } }
-                    },
-                    {
-                        code: 'TRX-250521-1023',
-                        date: '21 Mei 2025 14:15',
-                        type: 'Sewa Ban',
-                        channel: 'Offline',
-                        product: 'Sewa Ban',
-                        qty: 2,
-                        total: 10000,
-                        method: 'Tunai',
-                        status: 'Lunas',
-                        details: { ticketTypeKey: 'reguler', rentals: { ban: 2, sepeda: 0, gazebo: 0 } }
-                    },
-                    {
-                        code: 'TRX-250521-1022',
-                        date: '21 Mei 2025 13:58',
-                        type: 'Tiket Masuk',
-                        channel: 'Online',
-                        product: 'Tiket Reguler',
-                        qty: 2,
-                        total: 40000,
-                        method: 'QRIS',
-                        status: 'Lunas',
-                        details: { ticketTypeKey: 'reguler', rentals: { ban: 0, sepeda: 0, gazebo: 0 } }
-                    },
-                    {
-                        code: 'TRX-250521-1021',
-                        date: '21 Mei 2025 13:45',
-                        type: 'Sewa Gazebo',
-                        channel: 'Offline',
-                        product: 'Gazebo',
-                        qty: 1,
-                        total: 20000,
-                        method: 'Tunai',
-                        status: 'Lunas',
-                        details: { ticketTypeKey: 'reguler', rentals: { ban: 0, sepeda: 0, gazebo: 1 } }
-                    },
-                    {
-                        code: 'TRX-250521-1020',
-                        date: '21 Mei 2025 13:30',
-                        type: 'Sewa Angsa',
-                        channel: 'Online',
-                        product: 'Sewa Angsa',
-                        qty: 1,
-                        total: 5000,
-                        method: 'QRIS',
-                        status: 'Lunas',
-                        details: { ticketTypeKey: 'reguler', rentals: { ban: 0, sepeda: 1, gazebo: 0 } }
-                    }
-                ];
-                localStorage.setItem('waterboom_sales_history', JSON.stringify(historyData));
-            }
-            setHistory(historyData);
+            // 1. Ambil transaksi dari Supabase (menggantikan hardcoded history)
+            fetchTransactions();
 
             // 2. Load Prices
             const savedPrices = localStorage.getItem('waterboom_prices');
@@ -247,19 +297,19 @@ export default function AdminDashboard() {
             setSystemSettings(settingsData);
             setSettingsEdit(settingsData);
 
-            // Compute Statistics & KPIs
+            // Compute Statistics & KPIs (akan di-update ulang saat history dari Supabase selesai dimuat)
             let addedSales = 0;
             let addedTransactions = 0;
-
-            historyData.forEach(item => {
-                // Accumulate cashier sales
+            // Kita gunakan history state yang sudah di-set oleh fetchTransactions, 
+            // tapi untuk initial render kita hitung dari local fallback jika ada
+            const currentHistory = JSON.parse(localStorage.getItem('waterboom_sales_history') || '[]');
+            currentHistory.forEach(item => {
                 if (item.code.startsWith('WCI-')) {
                     addedSales += item.total || 0;
                     addedTransactions += 1;
                 }
             });
 
-            // Sum up expenditures
             let totalExpenses = 0;
             expensesData.forEach(e => {
                 totalExpenses += e.amount || 0;
@@ -273,11 +323,37 @@ export default function AdminDashboard() {
                 transactions: 1024 + addedTransactions
             });
         };
-
+        
         loadAllData();
         window.addEventListener('storage', loadAllData);
         return () => window.removeEventListener('storage', loadAllData);
     }, []);
+
+    // --- Hitung KPI setiap kali history atau expenditures berubah ---
+    useEffect(() => {
+        let totalSales = 0;
+        let totalTransactions = 0;
+        history.forEach(item => {
+            if (item.code.startsWith('WCI-')) {
+                totalSales += item.total || 0;
+                totalTransactions += 1;
+            }
+        });
+        
+        let totalOutflow = 0;
+        expenditures.forEach(e => totalOutflow += e.amount || 0);
+
+        const ticketRows = history.filter(i => i.type === 'Tiket Masuk');
+        const visitors = ticketRows.reduce((sum, r) => sum + (r.qty || 0), 0);
+
+        setKpis({
+            sales: 48750000 + totalSales,
+            inflow: 55350000 + totalSales,
+            outflow: totalOutflow,
+            visitors: 2356 + visitors,
+            transactions: 1024 + totalTransactions
+        });
+    }, [history, expenditures]);
 
     const toggleSubmenu = (menu) => {
         setMenuOpen(prev => ({
@@ -296,20 +372,21 @@ export default function AdminDashboard() {
         let banQty = 525;
         let gazeboQty = 320;
         let angsaQty = 240;
-
         history.forEach(item => {
             if (item.code.startsWith('WCI-') && item.details && item.details.rentals) {
                 const r = item.details.rentals;
                 banQty += r.ban || 0;
                 angsaQty += r.sepeda || 0; // sepeda maps to angsa
                 gazeboQty += r.gazebo || 0;
+            } else if (item.type && item.type.includes('Sewa')) {
+                if (item.type.includes('Ban')) banQty += item.qty || 0;
+                else if (item.type.includes('Angsa')) angsaQty += item.qty || 0;
+                else if (item.type.includes('Gazebo')) gazeboQty += item.qty || 0;
             }
         });
-
         const banRev = banQty * prices.rentals.ban;
         const gazeboRev = gazeboQty * prices.rentals.gazebo;
         const angsaRev = angsaQty * prices.rentals.sepeda;
-
         return {
             ban: { qty: banQty, rev: banRev },
             gazebo: { qty: gazeboQty, rev: gazeboRev },
@@ -357,17 +434,14 @@ export default function AdminDashboard() {
         setExpenditures(updated);
         localStorage.setItem('waterboom_expenditures', JSON.stringify(updated));
 
-        // Reset form
         setNewExpense({ date: '', category: 'Operasional', desc: '', amount: '' });
 
-        // Update stats
         let total = 0;
         updated.forEach(item => total += item.amount);
         setKpis(prev => ({
             ...prev,
             outflow: total
         }));
-
         alert('Pengeluaran berhasil ditambahkan!');
     };
 
@@ -377,7 +451,6 @@ export default function AdminDashboard() {
             const updated = expenditures.filter(item => item.id !== id);
             setExpenditures(updated);
             localStorage.setItem('waterboom_expenditures', JSON.stringify(updated));
-
             let total = 0;
             updated.forEach(item => total += item.amount);
             setKpis(prev => ({ ...prev, outflow: total }));
@@ -403,7 +476,6 @@ export default function AdminDashboard() {
         setStaffUsers(updated);
         localStorage.setItem('waterboom_staff_users', JSON.stringify(updated));
 
-        // Reset form
         setNewUser({ name: '', email: '', role: 'kasir', password: '' });
         alert('Akun Staf baru berhasil didaftarkan!');
     };
@@ -421,13 +493,24 @@ export default function AdminDashboard() {
         }
     };
 
-    // Delete sales history transaction (Refund)
-    const handleDeleteTransaction = (code) => {
+    // Delete sales history transaction (Refund) – hapus dari Supabase berdasarkan booking_code
+    const handleDeleteTransaction = async (code) => {
         if (window.confirm(`Apakah Anda yakin ingin melakukan refund/hapus transaksi ${code}?`)) {
+            const { error } = await supabase
+                .from('transactions')
+                .delete()
+                .eq('booking_code', code);
+
+            if (error) {
+                alert('Gagal menghapus transaksi: ' + error.message);
+                return;
+            }
+
+            // Update local state immediately for responsiveness
             const updated = history.filter(item => item.code !== code);
             setHistory(updated);
             localStorage.setItem('waterboom_sales_history', JSON.stringify(updated));
-
+            
             // Recalculate stats
             let addedSales = 0;
             let addedTransactions = 0;
@@ -437,7 +520,6 @@ export default function AdminDashboard() {
                     addedTransactions += 1;
                 }
             });
-
             setKpis(prev => ({
                 ...prev,
                 sales: 48750000 + addedSales,
@@ -445,7 +527,7 @@ export default function AdminDashboard() {
                 visitors: 2356 + (addedTransactions * 2),
                 transactions: 1024 + addedTransactions
             }));
-            alert(`Transaksi ${code} berhasil direfund.`);
+            alert(`Transaksi ${code} berhasil direfund dan dihapus dari database.`);
         }
     };
 
@@ -472,7 +554,6 @@ export default function AdminDashboard() {
                         <span className="brand-loc">PORTAL UTAMA</span>
                     </div>
                 </div>
-
                 <div className="sidebar-profile-card">
                     <div className="profile-avatar-circle" style={{ backgroundColor: currentAccount.badgeColor }}>
                         <i className={`fa-solid ${currentAccount.avatarIcon}`}></i>
@@ -482,12 +563,10 @@ export default function AdminDashboard() {
                         <span>{currentAccount.role}</span>
                     </div>
                 </div>
-
                 <nav className="sidebar-navigation">
                     <div className={`nav-menu-item ${activeTab === 'dashboard' ? 'active' : ''}`}>
                         <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('dashboard'); }}><i className="fa-solid fa-chart-pie"></i> Dashboard</a>
                     </div>
-
                     {/* PENJUALAN */}
                     <div className="sidebar-section-header clickable-header" onClick={() => toggleSection('penjualan')}>
                         <span>PENJUALAN</span>
@@ -521,7 +600,6 @@ export default function AdminDashboard() {
                                     </li>
                                 </ul>
                             </div>
-
                             <div className={`nav-menu-dropdown-wrapper ${menuOpen.sewaLayanan || (activeTab === 'transaksi' && searchQuery !== '') ? 'open' : ''}`}>
                                 <div className={`nav-menu-item dropdown-toggle ${activeTab === 'transaksi' && searchQuery !== '' ? 'active-parent' : ''}`} onClick={() => toggleSubmenu('sewaLayanan')}>
                                     <span><i className="fa-solid fa-parachute-box"></i> Sewa & Layanan</span>
@@ -557,13 +635,11 @@ export default function AdminDashboard() {
                                     </li>
                                 </ul>
                             </div>
-
                             <div className={`nav-menu-item ${activeTab === 'transaksi' && selectedFilter === 'all' && searchQuery === '' ? 'active' : ''}`}>
                                 <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); setSelectedFilter('all'); setSearchQuery(''); }}><i className="fa-solid fa-receipt"></i> Transaksi</a>
                             </div>
                         </div>
                     )}
-
                     {/* KEUANGAN */}
                     <div className="sidebar-section-header clickable-header" onClick={() => toggleSection('keuangan')}>
                         <span>KEUANGAN</span>
@@ -579,7 +655,6 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                     )}
-
                     {/* LAPORAN */}
                     <div className="sidebar-section-header clickable-header" onClick={() => toggleSection('laporan')}>
                         <span>LAPORAN</span>
@@ -598,7 +673,6 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                     )}
-
                     {/* MASTER DATA */}
                     <div className="sidebar-section-header clickable-header" onClick={() => toggleSection('masterData')}>
                         <span>MASTER DATA</span>
@@ -620,7 +694,6 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                     )}
-
                     {/* PENGATURAN */}
                     <div className="sidebar-section-header clickable-header" onClick={() => toggleSection('pengaturan')}>
                         <span>PENGATURAN</span>
@@ -637,7 +710,6 @@ export default function AdminDashboard() {
                         </div>
                     )}
                 </nav>
-
                 <div className="sidebar-logout-footer">
                     <button onClick={handleLogout} className="btn-sidebar-logout">
                         <i className="fa-solid fa-arrow-right-from-bracket"></i> Keluar
@@ -675,21 +747,18 @@ export default function AdminDashboard() {
                             {activeTab !== 'dashboard' && activeTab !== 'transaksi' && activeTab !== 'produk_harga' && activeTab !== 'pengguna' && activeTab !== 'pengeluaran' && activeTab !== 'rekap_keuangan' && 'Manajemen master data dan laporan operasional'}
                         </p>
                     </div>
-
                     <div className="header-controls-column">
                         <div className="date-range-selector">
                             <i className="fa-regular fa-calendar-days"></i>
                             <span>{dateRange}</span>
                             <i className="fa-solid fa-chevron-down caret"></i>
                         </div>
-
                         <div className="notif-wrapper" onClick={() => setShowNotifDropdown(!showNotifDropdown)}>
                             <button className="notif-btn">
                                 <i className="fa-regular fa-bell"></i>
                                 <span className="notif-count-badge">3</span>
                             </button>
                         </div>
-
                         <div className="user-profile-dropdown-container">
                             <div className="avatar-capsule" onClick={() => setShowProfileDropdown(!showProfileDropdown)}>
                                 <div className="profile-avatar-circle" style={{ width: '32px', height: '32px', fontSize: '0.85rem', backgroundColor: currentAccount.badgeColor, flexShrink: 0 }}>
@@ -701,13 +770,11 @@ export default function AdminDashboard() {
                                 </div>
                                 <i className={`fa-solid fa-chevron-${showProfileDropdown ? 'up' : 'down'} caret`}></i>
                             </div>
-
                             {showProfileDropdown && (
                                 <div className="account-switcher-dropdown">
                                     <div className="account-switcher-header">
                                         <span className="switcher-title">Beralih Akun (Account Switcher)</span>
                                     </div>
-
                                     <div className="account-switcher-list">
                                         {accounts.map(acc => (
                                             <div
@@ -733,7 +800,6 @@ export default function AdminDashboard() {
                                             </div>
                                         ))}
                                     </div>
-
                                     <div className="account-switcher-actions">
                                         <button
                                             className="account-action-btn"
@@ -759,7 +825,6 @@ export default function AdminDashboard() {
 
                 {/* Scrollable content area below navbar */}
                 <div className="superadmin-content-wrapper">
-
                     {/* KPI stats bar displayed globally across main pages */}
                     {(activeTab === 'dashboard' || activeTab === 'transaksi' || activeTab === 'pemasukan' || activeTab === 'pengeluaran') && (
                         <div className="superadmin-kpi-grid">
@@ -807,7 +872,6 @@ export default function AdminDashboard() {
                     )}
 
                     {/* 3. SWITCH RENDER TAB CONTENT */}
-
                     {/* TAB: DASHBOARD (MOCKUP COPIED) */}
                     {activeTab === 'dashboard' && (
                         <>
@@ -854,7 +918,6 @@ export default function AdminDashboard() {
                                         <span>15 Mei</span><span>16 Mei</span><span>17 Mei</span><span>18 Mei</span><span>19 Mei</span><span>20 Mei</span><span>21 Mei</span>
                                     </div>
                                 </div>
-
                                 {/* Donut Chart: Pemasukan Berdasarkan Sumber */}
                                 <div className="chart-card-box donut-chart-card">
                                     <h3>Pemasukan Berdasarkan Sumber</h3>
@@ -878,7 +941,6 @@ export default function AdminDashboard() {
                                         </div>
                                     </div>
                                 </div>
-
                                 {/* Progress channel card */}
                                 <div className="chart-card-box channel-sales-card">
                                     <h3>Penjualan Tiket Masuk</h3>
@@ -922,7 +984,6 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
                             </div>
-
                             <div className="dashboard-charts-row-2">
                                 {/* Latest Sales Log */}
                                 <div className="data-table-card latest-sales">
@@ -965,7 +1026,6 @@ export default function AdminDashboard() {
                                         <button className="page-nav-btn"><i className="fa-solid fa-chevron-right"></i></button>
                                     </div>
                                 </div>
-
                                 {/* Rentals Totals */}
                                 <div className="data-table-card rental-summary">
                                     <div className="table-header-block">
@@ -978,16 +1038,15 @@ export default function AdminDashboard() {
                                                 <tr><th>Layanan</th><th>Terjual</th><th>Pemasukan</th></tr>
                                             </thead>
                                             <tbody>
-                                                <tr><td><div className="service-name-row"><span className="service-square-icon green"><i className="fa-solid fa-[#10b981] fa-circle-dot"></i></span> Sewa Ban</div></td><td>{rentals.ban.qty}</td><td className="font-bold">Rp {rentals.ban.rev.toLocaleString('id-ID')}</td></tr>
-                                                <tr><td><div className="service-name-row"><span className="service-square-icon orange"><i className="fa-solid fa-[#f59e0b] fa-house"></i></span> Sewa Gazebo</div></td><td>{rentals.gazebo.qty}</td><td className="font-bold">Rp {rentals.gazebo.rev.toLocaleString('id-ID')}</td></tr>
-                                                <tr><td><div className="service-name-row"><span className="service-square-icon purple"><i className="fa-solid fa-[#8b5cf6] fa-feather"></i></span> Sewa Angsa</div></td><td>{rentals.angsa.qty}</td><td className="font-bold">Rp {rentals.angsa.rev.toLocaleString('id-ID')}</td></tr>
-                                                <tr className="total-row-highlight"><td><strong>Total</strong></td><td><strong>1.085</strong></td><td className="font-bold text-blue"><strong>Rp 14.050.000</strong></td></tr>
+                                                <tr><td><div className="service-name-row"><span className="service-square-icon green"><i className="fa-solid fa-circle-dot" style={{color: '#10b981'}}></i></span> Sewa Ban</div></td><td>{rentals.ban.qty}</td><td className="font-bold">Rp {rentals.ban.rev.toLocaleString('id-ID')}</td></tr>
+                                                <tr><td><div className="service-name-row"><span className="service-square-icon orange"><i className="fa-solid fa-house" style={{color: '#f59e0b'}}></i></span> Sewa Gazebo</div></td><td>{rentals.gazebo.qty}</td><td className="font-bold">Rp {rentals.gazebo.rev.toLocaleString('id-ID')}</td></tr>
+                                                <tr><td><div className="service-name-row"><span className="service-square-icon purple"><i className="fa-solid fa-feather" style={{color: '#8b5cf6'}}></i></span> Sewa Angsa</div></td><td>{rentals.angsa.qty}</td><td className="font-bold">Rp {rentals.angsa.rev.toLocaleString('id-ID')}</td></tr>
+                                                <tr className="total-row-highlight"><td><strong>Total</strong></td><td><strong>{rentals.totalQty}</strong></td><td className="font-bold text-blue"><strong>Rp {rentals.totalRev.toLocaleString('id-ID')}</strong></td></tr>
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
                             </div>
-
                             {/* Third Row: method, chart & expenditure */}
                             <div className="dashboard-charts-row-3">
                                 <div className="chart-card-box payment-methods-card">
@@ -1008,7 +1067,6 @@ export default function AdminDashboard() {
                                         </div>
                                     </div>
                                 </div>
-
                                 <div className="chart-card-box daily-visitors-card">
                                     <h3>Pengunjung Harian</h3>
                                     <div className="visitors-chart-container">
@@ -1024,7 +1082,6 @@ export default function AdminDashboard() {
                                         </div>
                                     </div>
                                 </div>
-
                                 <div className="data-table-card recent-expenditures">
                                     <div className="table-header-block">
                                         <h3>Pengeluaran Terbaru</h3>
@@ -1066,7 +1123,6 @@ export default function AdminDashboard() {
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                         />
                                     </div>
-
                                     <select
                                         value={selectedFilter}
                                         onChange={(e) => setSelectedFilter(e.target.value)}
@@ -1078,7 +1134,6 @@ export default function AdminDashboard() {
                                     </select>
                                 </div>
                             </div>
-
                             <div className="superadmin-table-wrapper">
                                 <table className="superadmin-table">
                                     <thead>
@@ -1146,7 +1201,6 @@ export default function AdminDashboard() {
                                     <div className="donut-legend-list" style={{ flexGrow: 1 }}>
                                         <h3 style={{ fontSize: '1.25rem', color: '#0f172a', marginBottom: '6px' }}>Total Pemasukan: <span className="text-green">Rp {kpis.inflow.toLocaleString('id-ID')}</span></h3>
                                         <p style={{ color: '#64748b', fontSize: '0.88rem', marginBottom: '16px' }}>Arus kas masuk bersumber dari Tiket Masuk (Offline & Online) serta Sewa Wahana & Peralatan.</p>
-
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                                             <div className="legend-row"><span className="bullet blue"></span><div className="info"><span>Tiket Masuk Offline</span><strong>Rp 26.450.000 <small>(47.8%)</small></strong></div></div>
                                             <div className="legend-row"><span className="bullet green"></span><div className="info"><span>Tiket Masuk Online</span><strong>Rp 14.850.000 <small>(26.8%)</small></strong></div></div>
@@ -1157,7 +1211,6 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
                             </div>
-
                             <div className="data-table-card">
                                 <div className="table-header-block">
                                     <h3>Daftar Log Transaksi Pemasukan Masuk</h3>
@@ -1247,7 +1300,6 @@ export default function AdminDashboard() {
                                     </button>
                                 </form>
                             </div>
-
                             {/* List tabel pengeluaran */}
                             <div className="data-table-card">
                                 <h3>Arus Kas Keluar</h3>
@@ -1332,13 +1384,10 @@ export default function AdminDashboard() {
                     {/* TAB: REKAP KEUANGAN — Full Financial Dashboard */}
                     {activeTab === 'rekap_keuangan' && (
                         <div className="rkeu-dashboard" style={{ fontFamily: "'Roboto', sans-serif" }}>
-
                             {/* === TOP ROW: 70/30 === */}
                             <div className="rkeu-top-row">
-
                                 {/* LEFT COLUMN (70%) */}
                                 <div className="rkeu-left-col">
-
                                     {/* Bar Chart: Pemasukan vs Pengeluaran */}
                                     <div className="rkeu-card">
                                         <div className="rkeu-card-title">
@@ -1377,7 +1426,6 @@ export default function AdminDashboard() {
                                             </div>
                                         </div>
                                     </div>
-
                                     {/* Two Donut Charts side by side */}
                                     <div className="rkeu-donut-row">
                                         {/* Donut 1: Pemasukan Berdasarkan Sumber */}
@@ -1397,13 +1445,12 @@ export default function AdminDashboard() {
                                                 <div className="rkeu-donut-legend">
                                                     <div className="rkeu-legend-row"><span style={{ background: '#1a73e8' }}></span><div><div className="rkeu-leg-label">Tiket Masuk Offline</div><div className="rkeu-leg-val">Rp 26.450.000 <span>(47.8%)</span></div></div></div>
                                                     <div className="rkeu-legend-row"><span style={{ background: '#10b981' }}></span><div><div className="rkeu-leg-label">Tiket Masuk Online</div><div className="rkeu-leg-val">Rp 14.850.000 <span>(26.8%)</span></div></div></div>
-                                                    <div className="rkeu-legend-row"><span style={{ background: '#f59e0b' }}></span><div><div className="rkeu-leg-label">Sewa Ban</div><div className="rkeu-leg-val">Rp 5.250.000 <span>(9.5%)</span></div></div></div>
-                                                    <div className="rkeu-legend-row"><span style={{ background: '#6366f1' }}></span><div><div className="rkeu-leg-label">Sewa Gazebo</div><div className="rkeu-leg-val">Rp 6.400.000 <span>(11.6%)</span></div></div></div>
-                                                    <div className="rkeu-legend-row"><span style={{ background: '#ec4899' }}></span><div><div className="rkeu-leg-label">Sewa Angsa</div><div className="rkeu-leg-val">Rp 2.400.000 <span>(4.3%)</span></div></div></div>
+                                                    <div className="rkeu-legend-row"><span style={{ background: '#f59e0b' }}></span><div><div className="rkeu-leg-label">Sewa Ban</div><div className="rkeu-leg-val">Rp {rentals.ban.rev.toLocaleString('id-ID')} <span>(9.5%)</span></div></div></div>
+                                                    <div className="rkeu-legend-row"><span style={{ background: '#6366f1' }}></span><div><div className="rkeu-leg-label">Sewa Gazebo</div><div className="rkeu-leg-val">Rp {rentals.gazebo.rev.toLocaleString('id-ID')} <span>(11.6%)</span></div></div></div>
+                                                    <div className="rkeu-legend-row"><span style={{ background: '#ec4899' }}></span><div><div className="rkeu-leg-label">Sewa Angsa</div><div className="rkeu-leg-val">Rp {rentals.angsa.rev.toLocaleString('id-ID')} <span>(4.3%)</span></div></div></div>
                                                 </div>
                                             </div>
                                         </div>
-
                                         {/* Donut 2: Metode Pembayaran */}
                                         <div className="rkeu-card rkeu-donut-card">
                                             <div className="rkeu-card-title">Metode Pembayaran</div>
@@ -1424,7 +1471,6 @@ export default function AdminDashboard() {
                                             </div>
                                         </div>
                                     </div>
-
                                     {/* 2x2 Ticket Sales Grid */}
                                     <div className="rkeu-ticket-grid">
                                         <div className="rkeu-card rkeu-ticket-card">
@@ -1469,7 +1515,6 @@ export default function AdminDashboard() {
                                         </div>
                                     </div>
                                 </div>
-
                                 {/* RIGHT COLUMN (30%) */}
                                 <div className="rkeu-right-col">
                                     {/* Tabel Transaksi Terbaru */}
@@ -1481,15 +1526,18 @@ export default function AdminDashboard() {
                                         <table className="rkeu-table">
                                             <thead><tr><th>Tanggal</th><th>No. TRX</th><th>Jenis</th><th>Total</th><th>Metode</th></tr></thead>
                                             <tbody>
-                                                <tr><td>21 Mei 2025 14:32</td><td>TRX-250521-1024</td><td><span className="rkeu-badge blue">Tiket Masuk</span></td><td>Rp 60.000</td><td>Tunai</td></tr>
-                                                <tr><td>21 Mei 2025 14:15</td><td>TRX-250521-1023</td><td><span className="rkeu-badge green">Sewa Ban</span></td><td>Rp 10.000</td><td>Tunai</td></tr>
-                                                <tr><td>21 Mei 2025 13:58</td><td>TRX-250521-1022</td><td><span className="rkeu-badge blue">Tiket Masuk</span></td><td>Rp 40.000</td><td>QRIS</td></tr>
-                                                <tr><td>21 Mei 2025 13:45</td><td>TRX-250521-1021</td><td><span className="rkeu-badge orange">Sewa Gazebo</span></td><td>Rp 20.000</td><td>Tunai</td></tr>
-                                                <tr><td>21 Mei 2025 13:30</td><td>TRX-250521-1020</td><td><span className="rkeu-badge purple">Sewa Angsa</span></td><td>Rp 5.000</td><td>QRIS</td></tr>
+                                                {filteredHistory.slice(0, 5).map((item, idx) => (
+                                                    <tr key={idx}>
+                                                        <td>{item.date}</td>
+                                                        <td>{item.code}</td>
+                                                        <td><span className={`rkeu-badge ${item.type === 'Tiket Masuk' ? 'blue' : item.type.includes('Ban') ? 'green' : item.type.includes('Gazebo') ? 'orange' : 'purple'}`}>{item.type}</span></td>
+                                                        <td>Rp {item.total.toLocaleString('id-ID')}</td>
+                                                        <td>{item.method}</td>
+                                                    </tr>
+                                                ))}
                                             </tbody>
                                         </table>
                                     </div>
-
                                     {/* Tabel Ringkasan Layanan Sewa */}
                                     <div className="rkeu-card rkeu-right-panel">
                                         <div className="rkeu-panel-title">
@@ -1501,28 +1549,27 @@ export default function AdminDashboard() {
                                             <tbody>
                                                 <tr>
                                                     <td><div className="rkeu-service-name"><span className="rkeu-sq green"></span> Sewa Ban</div></td>
-                                                    <td>525</td>
-                                                    <td>Rp 5.250.000</td>
+                                                    <td>{rentals.ban.qty}</td>
+                                                    <td>Rp {rentals.ban.rev.toLocaleString('id-ID')}</td>
                                                 </tr>
                                                 <tr>
                                                     <td><div className="rkeu-service-name"><span className="rkeu-sq orange"></span> Sewa Gazebo</div></td>
-                                                    <td>320</td>
-                                                    <td>Rp 6.400.000</td>
+                                                    <td>{rentals.gazebo.qty}</td>
+                                                    <td>Rp {rentals.gazebo.rev.toLocaleString('id-ID')}</td>
                                                 </tr>
                                                 <tr>
                                                     <td><div className="rkeu-service-name"><span className="rkeu-sq purple"></span> Sewa Angsa</div></td>
-                                                    <td>240</td>
-                                                    <td>Rp 2.400.000</td>
+                                                    <td>{rentals.angsa.qty}</td>
+                                                    <td>Rp {rentals.angsa.rev.toLocaleString('id-ID')}</td>
                                                 </tr>
                                                 <tr className="rkeu-total-row">
                                                     <td><strong>Total</strong></td>
-                                                    <td><strong>1.085</strong></td>
-                                                    <td><strong>Rp 14.050.000</strong></td>
+                                                    <td><strong>{rentals.totalQty}</strong></td>
+                                                    <td><strong>Rp {rentals.totalRev.toLocaleString('id-ID')}</strong></td>
                                                 </tr>
                                             </tbody>
                                         </table>
                                     </div>
-
                                     {/* Tabel Pengeluaran Terbaru */}
                                     <div className="rkeu-card rkeu-right-panel">
                                         <div className="rkeu-panel-title">
@@ -1532,15 +1579,19 @@ export default function AdminDashboard() {
                                         <table className="rkeu-table">
                                             <thead><tr><th>Tanggal</th><th>Kategori</th><th>Deskripsi</th><th>Jumlah</th></tr></thead>
                                             <tbody>
-                                                <tr><td>21 Mei 2025</td><td><span className="rkeu-cat-badge">Operasional</span></td><td>Pembelian Bahan Kimia Kolam</td><td className="rkeu-red">Rp 1.250.000</td></tr>
-                                                <tr><td>21 Mei 2025</td><td><span className="rkeu-cat-badge">Listrik & Air</span></td><td>Pembayaran Listrik & Air</td><td className="rkeu-red">Rp 2.150.000</td></tr>
-                                                <tr><td>20 Mei 2025</td><td><span className="rkeu-cat-badge">Perawatan</span></td><td>Perawatan Wahana Air</td><td className="rkeu-red">Rp 1.800.000</td></tr>
+                                                {expenditures.slice(0, 3).map((item, idx) => (
+                                                    <tr key={idx}>
+                                                        <td>{item.date}</td>
+                                                        <td><span className="rkeu-cat-badge">{item.category}</span></td>
+                                                        <td>{item.desc}</td>
+                                                        <td className="rkeu-red">Rp {item.amount.toLocaleString('id-ID')}</td>
+                                                    </tr>
+                                                ))}
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
                             </div>
-
                             {/* === BOTTOM: Full-width Stacked Bar Chart === */}
                             <div className="rkeu-card rkeu-stacked-card">
                                 <div className="rkeu-card-title">Pengunjung Harian</div>
@@ -1575,7 +1626,6 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     )}
 
@@ -1586,7 +1636,6 @@ export default function AdminDashboard() {
                             <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '24px' }}>
                                 Perubahan harga di bawah ini akan langsung merubah tarif pada portal Kasir (POS) petugas di lapangan.
                             </p>
-
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                 <h4 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>Harga Tiket Masuk (Rp)</h4>
                                 <div className="input-group-field">
@@ -1628,7 +1677,6 @@ export default function AdminDashboard() {
                                         style={{ height: '42px', padding: '10px' }}
                                     />
                                 </div>
-
                                 <h4 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', marginTop: '10px' }}>Harga Layanan Sewa (Rp)</h4>
                                 <div className="input-group-field">
                                     <label>Sewa Ban Pelampung</label>
@@ -1669,7 +1717,6 @@ export default function AdminDashboard() {
                                         style={{ height: '42px', padding: '10px' }}
                                     />
                                 </div>
-
                                 <button type="submit" className="btn-login-submit" style={{ height: '48px', borderRadius: '12px', marginTop: '10px' }}>
                                     <i className="fa-solid fa-circle-check"></i> Simpan Perubahan Tarif
                                 </button>
@@ -1710,7 +1757,6 @@ export default function AdminDashboard() {
                                     <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Daftar pesanan tiket pengunjung langsung. Admin dapat mencetak Tiket PDF & mengirimkan via WhatsApp.</p>
                                 </div>
                             </div>
-
                             <div className="superadmin-table-wrapper" style={{ marginTop: '15px' }}>
                                 <table className="superadmin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
@@ -1743,15 +1789,15 @@ export default function AdminDashboard() {
                                                 </td>
                                                 <td>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
-                                                        <button 
-                                                            onClick={() => setSelectedPDFTicket(t)} 
+                                                        <button
+                                                            onClick={() => setSelectedPDFTicket(t)}
                                                             style={{ backgroundColor: '#0c294a', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                                         >
                                                             <i className="fa-solid fa-file-pdf"></i> Cetak PDF
                                                         </button>
-                                                        <button 
+                                                        <button
                                                             onClick={() => {
-                                                                const waText = `Halo kak ${t.name || ''}, berikut Tiket Resmi PDF Waterboom Cijoho Indah untuk Kode Booking: *${t.code}*.\n\nTanggal: ${t.date}\nTotal: Rp ${t.total?.toLocaleString('id-ID')}\n\nE-Tiket PDF siap digunakan di pintu masuk. Terima kasih!`;
+                                                                const waText = `Halo kak ${t.name || ''}, berikut Tiket Resmi PDF Waterboom Cijoho Indah untuk Kode Booking: *${t.code}*.\nTanggal: ${t.date}\nTotal: Rp ${t.total?.toLocaleString('id-ID')}\nE-Tiket PDF siap digunakan di pintu masuk. Terima kasih!`;
                                                                 window.open(`https://wa.me/${(t.phone || '6281234567890').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waText)}`, '_blank');
                                                             }}
                                                             style={{ backgroundColor: '#25D366', color: 'white', border: 'none', padding: '6px 10px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -1828,7 +1874,6 @@ export default function AdminDashboard() {
                                     </button>
                                 </form>
                             </div>
-
                             {/* List tabel pengguna */}
                             <div className="data-table-card">
                                 <h3>Daftar Staf Aktif</h3>
@@ -1918,7 +1963,6 @@ export default function AdminDashboard() {
                                         style={{ height: '42px', padding: '10px' }}
                                     />
                                 </div>
-
                                 <button type="submit" className="btn-login-submit" style={{ height: '48px', borderRadius: '12px' }}>
                                     <i className="fa-solid fa-floppy-disk"></i> Simpan Pengaturan
                                 </button>
@@ -1938,7 +1982,6 @@ export default function AdminDashboard() {
                             </h4>
                             <button onClick={() => setSelectedPDFTicket(null)} style={{ color: 'white' }}>&times;</button>
                         </div>
-
                         <div className="v-modal-body" style={{ padding: '24px', backgroundColor: '#fff' }}>
                             <div id="pdf-printable-area" style={{ border: '2px solid #0c294a', borderRadius: '16px', padding: '20px', backgroundColor: '#f8fafc' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0c294a', paddingBottom: '12px', marginBottom: '16px' }}>
@@ -1953,7 +1996,6 @@ export default function AdminDashboard() {
                                         VALIDATED / LUNAS
                                     </span>
                                 </div>
-
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.85rem', marginBottom: '16px' }}>
                                     <div>
                                         <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>KODE BOOKING</span>
@@ -1972,7 +2014,6 @@ export default function AdminDashboard() {
                                         <strong>{selectedPDFTicket.phone || '-'}</strong>
                                     </div>
                                 </div>
-
                                 <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '10px', marginBottom: '16px' }}>
                                     <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', marginBottom: '6px' }}>RINCIAN ITEM & TOTAL:</span>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
@@ -1980,7 +2021,6 @@ export default function AdminDashboard() {
                                         <strong>Rp {selectedPDFTicket.total?.toLocaleString('id-ID')}</strong>
                                     </div>
                                 </div>
-
                                 <div style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
                                     <div style={{ fontSize: '4.5rem', color: '#0c294a', lineHeight: 1 }}>
                                         <i className="fa-solid fa-qrcode"></i>
@@ -1991,17 +2031,16 @@ export default function AdminDashboard() {
                                     <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Tunjukkan barcode/QR code ini ke loket pintu masuk</small>
                                 </div>
                             </div>
-
                             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                                <button 
+                                <button
                                     onClick={() => window.print()}
                                     style={{ flex: 1, backgroundColor: '#1a73e8', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                 >
                                     <i className="fa-solid fa-print"></i> Cetak / Simpan Ke PDF
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => {
-                                        const waText = `Halo kak ${selectedPDFTicket.name || ''}, berikut Tiket Resmi PDF Waterboom Cijoho Indah untuk Kode Booking: *${selectedPDFTicket.code}*.\n\nTanggal: ${selectedPDFTicket.date}\nTotal: Rp ${selectedPDFTicket.total?.toLocaleString('id-ID')}\n\nE-Tiket PDF siap digunakan di pintu masuk. Terima kasih!`;
+                                        const waText = `Halo kak ${selectedPDFTicket.name || ''}, berikut Tiket Resmi PDF Waterboom Cijoho Indah untuk Kode Booking: *${selectedPDFTicket.code}*.\nTanggal: ${selectedPDFTicket.date}\nTotal: Rp ${selectedPDFTicket.total?.toLocaleString('id-ID')}\nE-Tiket PDF siap digunakan di pintu masuk. Terima kasih!`;
                                         window.open(`https://wa.me/${(selectedPDFTicket.phone || '6281234567890').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waText)}`, '_blank');
                                     }}
                                     style={{ flex: 1, backgroundColor: '#25D366', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
