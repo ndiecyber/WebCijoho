@@ -124,6 +124,8 @@ export default function AdminDashboard() {
             if (savedHistory) {
                 try {
                     historyData = JSON.parse(savedHistory);
+                    historyData = historyData.filter(item => item.code && !item.code.startsWith('TRX-250521-'));
+                    localStorage.setItem('waterboom_sales_history', JSON.stringify(historyData));
                 } catch(e) {
                     historyData = [];
                 }
@@ -152,6 +154,8 @@ export default function AdminDashboard() {
             if (savedExpenses) {
                 try {
                     expensesData = JSON.parse(savedExpenses);
+                    expensesData = expensesData.filter(e => e.id !== '1' && e.id !== '2' && e.id !== '3');
+                    localStorage.setItem('waterboom_expenditures', JSON.stringify(expensesData));
                 } catch(e) {
                     expensesData = [];
                 }
@@ -862,43 +866,53 @@ export default function AdminDashboard() {
                                             <text x="15" y="94" fill="#94a3b8" fontSize="8" fontWeight="700">15 JT</text>
                                             <text x="15" y="144" fill="#94a3b8" fontSize="8" fontWeight="700">10 JT</text>
                                             <text x="15" y="190" fill="#94a3b8" fontSize="8" fontWeight="700">0</text>
-                                            <path d="M 50 140 Q 120 110 190 60 T 330 80 T 470 120 L 470 190 L 50 190 Z" fill="url(#pemasukanGrad)" />
-                                            <path d="M 50 140 Q 120 110 190 60 T 330 80 T 470 120" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
-                                            <path d="M 50 150 Q 120 158 190 145 T 330 142 T 470 148 L 470 190 L 50 190 Z" fill="url(#pengeluaranGrad)" />
-                                            <path d="M 50 150 Q 120 158 190 145 T 330 142 T 470 148" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="3 3" />
-                                            <circle cx="50" cy="140" r="4" fill="#10b981" stroke="white" strokeWidth="1" />
-                                            <circle cx="120" cy="110" r="4" fill="#10b981" stroke="white" strokeWidth="1" />
-                                            <circle cx="190" cy="60" r="4" fill="#10b981" stroke="white" strokeWidth="1" />
-                                            <circle cx="260" cy="72" r="4" fill="#10b981" stroke="white" strokeWidth="1" />
-                                            <circle cx="330" cy="80" r="4" fill="#10b981" stroke="white" strokeWidth="1" />
-                                            <circle cx="470" cy="120" r="4" fill="#10b981" stroke="white" strokeWidth="1" />
+                                            {reportMetrics.sales > 0 ? (
+                                                <>
+                                                    <path d="M 50 140 Q 120 110 190 60 T 330 80 T 470 120 L 470 190 L 50 190 Z" fill="url(#pemasukanGrad)" />
+                                                    <path d="M 50 140 Q 120 110 190 60 T 330 80 T 470 120" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
+                                                </>
+                                            ) : (
+                                                <line x1="50" y1="190" x2="470" y2="190" stroke="#10b981" strokeWidth="2" strokeDasharray="4 4" />
+                                            )}
+                                            {kpis.outflow > 0 ? (
+                                                <>
+                                                    <path d="M 50 150 Q 120 158 190 145 T 330 142 T 470 148 L 470 190 L 50 190 Z" fill="url(#pengeluaranGrad)" />
+                                                    <path d="M 50 150 Q 120 158 190 145 T 330 142 T 470 148" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="3 3" />
+                                                </>
+                                            ) : (
+                                                <line x1="50" y1="190" x2="470" y2="190" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="2 2" />
+                                            )}
                                         </svg>
                                     </div>
                                     <div className="chart-x-labels">
-                                        <span>15 Mei</span><span>16 Mei</span><span>17 Mei</span><span>18 Mei</span><span>19 Mei</span><span>20 Mei</span><span>21 Mei</span>
+                                        <span>Senin</span><span>Selasa</span><span>Rabu</span><span>Kamis</span><span>Jumat</span><span>Sabtu</span><span>Minggu</span>
                                     </div>
                                 </div>
 
-                                {/* Donut Chart: Pemasukan Berdasarkan Sumber */}
+                                 {/* Donut Chart: Pemasukan Berdasarkan Sumber */}
                                 <div className="chart-card-box donut-chart-card">
                                     <h3>Pemasukan Berdasarkan Sumber</h3>
                                     <div className="donut-chart-flex">
                                         <div className="svg-donut-wrapper">
                                             <svg viewBox="0 0 100 100" width="120" height="120">
                                                 <circle cx="50" cy="50" r="40" fill="transparent" stroke="#eff6ff" strokeWidth="15" />
-                                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1a73e8" strokeWidth="15" strokeDasharray="120 251.2" strokeDashoffset="0" transform="rotate(-90 50 50)" />
-                                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="15" strokeDasharray="67 251.2" strokeDashoffset="-120" transform="rotate(-90 50 50)" />
-                                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f59e0b" strokeWidth="15" strokeDasharray="24 251.2" strokeDashoffset="-187" transform="rotate(-90 50 50)" />
-                                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#6366f1" strokeWidth="15" strokeDasharray="29 251.2" strokeDashoffset="-211" transform="rotate(-90 50 50)" />
-                                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#ec4899" strokeWidth="15" strokeDasharray="11 251.2" strokeDashoffset="-240" transform="rotate(-90 50 50)" />
+                                                {reportMetrics.sales > 0 && (
+                                                    <>
+                                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1a73e8" strokeWidth="15" strokeDasharray={`${(reportMetrics.offlineSales / reportMetrics.sales) * 251.2} 251.2`} strokeDashoffset="0" transform="rotate(-90 50 50)" />
+                                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="15" strokeDasharray={`${(reportMetrics.onlineSales / reportMetrics.sales) * 251.2} 251.2`} strokeDashoffset={`-${(reportMetrics.offlineSales / reportMetrics.sales) * 251.2}`} transform="rotate(-90 50 50)" />
+                                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f59e0b" strokeWidth="15" strokeDasharray={`${(rentals.ban.rev / reportMetrics.sales) * 251.2} 251.2`} strokeDashoffset={`-${((reportMetrics.offlineSales + reportMetrics.onlineSales) / reportMetrics.sales) * 251.2}`} transform="rotate(-90 50 50)" />
+                                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#6366f1" strokeWidth="15" strokeDasharray={`${(rentals.gazebo.rev / reportMetrics.sales) * 251.2} 251.2`} strokeDashoffset={`-${((reportMetrics.offlineSales + reportMetrics.onlineSales + rentals.ban.rev) / reportMetrics.sales) * 251.2}`} transform="rotate(-90 50 50)" />
+                                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#ec4899" strokeWidth="15" strokeDasharray={`${(rentals.angsa.rev / reportMetrics.sales) * 251.2} 251.2`} strokeDashoffset={`-${((reportMetrics.offlineSales + reportMetrics.onlineSales + rentals.ban.rev + rentals.gazebo.rev) / reportMetrics.sales) * 251.2}`} transform="rotate(-90 50 50)" />
+                                                    </>
+                                                )}
                                             </svg>
                                         </div>
                                         <div className="donut-legend-list">
-                                            <div className="legend-row"><span className="bullet blue"></span><div className="info"><span>Tiket Masuk Offline</span><strong>Rp 26.450.000 <small>(47.8%)</small></strong></div></div>
-                                            <div className="legend-row"><span className="bullet green"></span><div className="info"><span>Tiket Masuk Online</span><strong>Rp 14.850.000 <small>(26.8%)</small></strong></div></div>
-                                            <div className="legend-row"><span className="bullet orange"></span><div className="info"><span>Sewa Ban</span><strong>Rp 5.250.000 <small>(9.5%)</small></strong></div></div>
-                                            <div className="legend-row"><span className="bullet indigo"></span><div className="info"><span>Sewa Gazebo</span><strong>Rp 6.400.000 <small>(11.6%)</small></strong></div></div>
-                                            <div className="legend-row"><span className="bullet pink"></span><div className="info"><span>Sewa Angsa</span><strong>Rp 2.400.000 <small>(4.3%)</small></strong></div></div>
+                                            <div className="legend-row"><span className="bullet blue"></span><div className="info"><span>Tiket Masuk Offline</span><strong>Rp {reportMetrics.offlineSales.toLocaleString('id-ID')} <small>({reportMetrics.sales > 0 ? ((reportMetrics.offlineSales / reportMetrics.sales) * 100).toFixed(1) : '0.0'}%)</small></strong></div></div>
+                                            <div className="legend-row"><span className="bullet green"></span><div className="info"><span>Tiket Masuk Online</span><strong>Rp {reportMetrics.onlineSales.toLocaleString('id-ID')} <small>({reportMetrics.sales > 0 ? ((reportMetrics.onlineSales / reportMetrics.sales) * 100).toFixed(1) : '0.0'}%)</small></strong></div></div>
+                                            <div className="legend-row"><span className="bullet orange"></span><div className="info"><span>Sewa Ban</span><strong>Rp {rentals.ban.rev.toLocaleString('id-ID')} <small>({reportMetrics.sales > 0 ? ((rentals.ban.rev / reportMetrics.sales) * 100).toFixed(1) : '0.0'}%)</small></strong></div></div>
+                                            <div className="legend-row"><span className="bullet indigo"></span><div className="info"><span>Sewa Gazebo</span><strong>Rp {rentals.gazebo.rev.toLocaleString('id-ID')} <small>({reportMetrics.sales > 0 ? ((rentals.gazebo.rev / reportMetrics.sales) * 100).toFixed(1) : '0.0'}%)</small></strong></div></div>
+                                            <div className="legend-row"><span className="bullet pink"></span><div className="info"><span>Sewa Angsa</span><strong>Rp {rentals.angsa.rev.toLocaleString('id-ID')} <small>({reportMetrics.sales > 0 ? ((rentals.angsa.rev / reportMetrics.sales) * 100).toFixed(1) : '0.0'}%)</small></strong></div></div>
                                         </div>
                                     </div>
                                 </div>
@@ -913,16 +927,16 @@ export default function AdminDashboard() {
                                                     <div className="channel-icon-square blue"><i className="fa-solid fa-store"></i></div>
                                                     <div>
                                                         <span className="channel-label">Offline</span>
-                                                        <div className="channel-value">Rp 26.450.000</div>
-                                                        <span className="channel-sub">1.452 Tiket</span>
+                                                        <div className="channel-value">Rp {reportMetrics.offlineSales.toLocaleString('id-ID')}</div>
+                                                        <span className="channel-sub">{reportMetrics.offlineTickets} Tiket</span>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="bar-wrapper">
                                                 <div className="bar-track">
-                                                    <div className="bar-fill blue" style={{ width: '57%' }}></div>
+                                                    <div className="bar-fill blue" style={{ width: `${reportMetrics.totalTickets > 0 ? Math.round((reportMetrics.offlineTickets / reportMetrics.totalTickets) * 100) : 0}%` }}></div>
                                                 </div>
-                                                <span className="pct-label">57%</span>
+                                                <span className="pct-label">{reportMetrics.totalTickets > 0 ? Math.round((reportMetrics.offlineTickets / reportMetrics.totalTickets) * 100) : 0}%</span>
                                             </div>
                                         </div>
                                         <div className="channel-box">
@@ -931,16 +945,16 @@ export default function AdminDashboard() {
                                                     <div className="channel-icon-square green"><i className="fa-solid fa-globe"></i></div>
                                                     <div>
                                                         <span className="channel-label">Online</span>
-                                                        <div className="channel-value">Rp 14.850.000</div>
-                                                        <span className="channel-sub">904 Tiket</span>
+                                                        <div className="channel-value">Rp {reportMetrics.onlineSales.toLocaleString('id-ID')}</div>
+                                                        <span className="channel-sub">{reportMetrics.onlineTickets} Tiket</span>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="bar-wrapper">
                                                 <div className="bar-track">
-                                                    <div className="bar-fill green" style={{ width: '43%' }}></div>
+                                                    <div className="bar-fill green" style={{ width: `${reportMetrics.totalTickets > 0 ? Math.round((reportMetrics.onlineTickets / reportMetrics.totalTickets) * 100) : 0}%` }}></div>
                                                 </div>
-                                                <span className="pct-label">43%</span>
+                                                <span className="pct-label">{reportMetrics.totalTickets > 0 ? Math.round((reportMetrics.onlineTickets / reportMetrics.totalTickets) * 100) : 0}%</span>
                                             </div>
                                         </div>
                                     </div>
@@ -962,31 +976,26 @@ export default function AdminDashboard() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {filteredHistory.slice(0, 5).map((item, idx) => (
-                                                    <tr key={idx}>
-                                                        <td className="text-secondary">{item.date}</td>
-                                                        <td className="font-bold">{item.code}</td>
-                                                        <td><span className={`type-badge ${item.type === 'Tiket Masuk' ? 'ticket' : 'rental'}`}><i className={`fa-solid ${item.type === 'Tiket Masuk' ? 'fa-ticket' : 'fa-parachute-box'}`}></i> {item.type}</span></td>
-                                                        <td><span className={`channel-badge ${item.channel === 'Offline' ? 'offline' : 'online'}`}>{item.channel}</span></td>
-                                                        <td>{item.product}</td>
-                                                        <td>{item.qty}</td>
-                                                        <td className="font-bold">Rp {item.total.toLocaleString('id-ID')}</td>
-                                                        <td><span className="method-text">{item.method}</span></td>
+                                                {filteredHistory.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan="8" style={{ textAlign: 'center', color: '#94a3b8', padding: '24px' }}>Belum ada data penjualan.</td>
                                                     </tr>
-                                                ))}
+                                                ) : (
+                                                    filteredHistory.slice(0, 5).map((item, idx) => (
+                                                        <tr key={idx}>
+                                                            <td className="text-secondary">{item.date}</td>
+                                                            <td className="font-bold">{item.code}</td>
+                                                            <td><span className={`type-badge ${item.type === 'Tiket Masuk' ? 'ticket' : 'rental'}`}><i className={`fa-solid ${item.type === 'Tiket Masuk' ? 'fa-ticket' : 'fa-parachute-box'}`}></i> {item.type}</span></td>
+                                                            <td><span className={`channel-badge ${item.channel === 'Offline' ? 'offline' : 'online'}`}>{item.channel}</span></td>
+                                                            <td>{item.product}</td>
+                                                            <td>{item.qty}</td>
+                                                            <td className="font-bold">Rp {item.total.toLocaleString('id-ID')}</td>
+                                                            <td><span className="method-text">{item.method}</span></td>
+                                                        </tr>
+                                                    ))
+                                                )}
                                             </tbody>
                                         </table>
-                                    </div>
-                                    <div className="table-pagination-bar">
-                                        <button className="page-nav-btn"><i className="fa-solid fa-chevron-left"></i></button>
-                                        <button className="page-num active">1</button>
-                                        <button className="page-num">2</button>
-                                        <button className="page-num">3</button>
-                                        <button className="page-num">4</button>
-                                        <button className="page-num">5</button>
-                                        <span className="dots">...</span>
-                                        <button className="page-num">205</button>
-                                        <button className="page-nav-btn"><i className="fa-solid fa-chevron-right"></i></button>
                                     </div>
                                 </div>
 
@@ -1005,7 +1014,7 @@ export default function AdminDashboard() {
                                                 <tr><td><div className="service-name-row"><span className="service-square-icon green"><i className="fa-solid fa-[#10b981] fa-circle-dot"></i></span> Sewa Ban</div></td><td>{rentals.ban.qty}</td><td className="font-bold">Rp {rentals.ban.rev.toLocaleString('id-ID')}</td></tr>
                                                 <tr><td><div className="service-name-row"><span className="service-square-icon orange"><i className="fa-solid fa-[#f59e0b] fa-house"></i></span> Sewa Gazebo</div></td><td>{rentals.gazebo.qty}</td><td className="font-bold">Rp {rentals.gazebo.rev.toLocaleString('id-ID')}</td></tr>
                                                 <tr><td><div className="service-name-row"><span className="service-square-icon purple"><i className="fa-solid fa-[#8b5cf6] fa-feather"></i></span> Sewa Angsa</div></td><td>{rentals.angsa.qty}</td><td className="font-bold">Rp {rentals.angsa.rev.toLocaleString('id-ID')}</td></tr>
-                                                <tr className="total-row-highlight"><td><strong>Total</strong></td><td><strong>1.085</strong></td><td className="font-bold text-blue"><strong>Rp 14.050.000</strong></td></tr>
+                                                <tr className="total-row-highlight"><td><strong>Total</strong></td><td><strong>{rentals.totalQty}</strong></td><td className="font-bold text-blue"><strong>Rp {rentals.totalRev.toLocaleString('id-ID')}</strong></td></tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -1020,15 +1029,19 @@ export default function AdminDashboard() {
                                         <div className="svg-donut-wrapper">
                                             <svg viewBox="0 0 100 100" width="120" height="120">
                                                 <circle cx="50" cy="50" r="40" fill="transparent" stroke="#eff6ff" strokeWidth="15" />
-                                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1a73e8" strokeWidth="15" strokeDasharray="134 251.2" strokeDashoffset="0" transform="rotate(-90 50 50)" />
-                                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="15" strokeDasharray="106 251.2" strokeDashoffset="-134" transform="rotate(-90 50 50)" />
-                                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f59e0b" strokeWidth="15" strokeDasharray="11 251.2" strokeDashoffset="-240" transform="rotate(-90 50 50)" />
+                                                {reportMetrics.sales > 0 && (
+                                                    <>
+                                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1a73e8" strokeWidth="15" strokeDasharray={`${(reportMetrics.cashSales / reportMetrics.sales) * 251.2} 251.2`} strokeDashoffset="0" transform="rotate(-90 50 50)" />
+                                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="15" strokeDasharray={`${(reportMetrics.qrisSales / reportMetrics.sales) * 251.2} 251.2`} strokeDashoffset={`-${(reportMetrics.cashSales / reportMetrics.sales) * 251.2}`} transform="rotate(-90 50 50)" />
+                                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f59e0b" strokeWidth="15" strokeDasharray={`${(reportMetrics.transferSales / reportMetrics.sales) * 251.2} 251.2`} strokeDashoffset={`-${((reportMetrics.cashSales + reportMetrics.qrisSales) / reportMetrics.sales) * 251.2}`} transform="rotate(-90 50 50)" />
+                                                    </>
+                                                )}
                                             </svg>
                                         </div>
                                         <div className="donut-legend-list">
-                                            <div className="legend-row"><span className="bullet blue"></span><div className="info"><span>Tunai</span><strong>Rp 29.580.000 <small>(53.4%)</small></strong></div></div>
-                                            <div className="legend-row"><span className="bullet green"></span><div className="info"><span>QRIS</span><strong>Rp 23.450.000 <small>(42.4%)</small></strong></div></div>
-                                            <div className="legend-row"><span className="bullet orange"></span><div className="info"><span>Transfer</span><strong>Rp 2.320.000 <small>(4.2%)</small></strong></div></div>
+                                            <div className="legend-row"><span className="bullet blue"></span><div className="info"><span>Tunai</span><strong>Rp {reportMetrics.cashSales.toLocaleString('id-ID')} <small>({reportMetrics.sales > 0 ? ((reportMetrics.cashSales / reportMetrics.sales) * 100).toFixed(1) : '0.0'}%)</small></strong></div></div>
+                                            <div className="legend-row"><span className="bullet green"></span><div className="info"><span>QRIS</span><strong>Rp {reportMetrics.qrisSales.toLocaleString('id-ID')} <small>({reportMetrics.sales > 0 ? ((reportMetrics.qrisSales / reportMetrics.sales) * 100).toFixed(1) : '0.0'}%)</small></strong></div></div>
+                                            <div className="legend-row"><span className="bullet orange"></span><div className="info"><span>Transfer</span><strong>Rp {reportMetrics.transferSales.toLocaleString('id-ID')} <small>({reportMetrics.sales > 0 ? ((reportMetrics.transferSales / reportMetrics.sales) * 100).toFixed(1) : '0.0'}%)</small></strong></div></div>
                                         </div>
                                     </div>
                                 </div>
@@ -1038,13 +1051,12 @@ export default function AdminDashboard() {
                                     <div className="visitors-chart-container">
                                         <div className="y-axis-labels"><span>800</span><span>600</span><span>400</span><span>200</span><span>0</span></div>
                                         <div className="bar-chart-bars">
-                                            <div className="chart-col"><div className="bar-fill" style={{ height: '55%' }}></div><span className="label">15 Mei</span></div>
-                                            <div className="chart-col"><div className="bar-fill" style={{ height: '50%' }}></div><span className="label">16 Mei</span></div>
-                                            <div className="chart-col"><div className="bar-fill" style={{ height: '80%' }}></div><span className="label">17 Mei</span></div>
-                                            <div className="chart-col"><div className="bar-fill" style={{ height: '75%' }}></div><span className="label">18 Mei</span></div>
-                                            <div className="chart-col"><div className="bar-fill" style={{ height: '75%' }}></div><span className="label">19 Mei</span></div>
-                                            <div className="chart-col"><div className="bar-fill" style={{ height: '50%' }}></div><span className="label">20 Mei</span></div>
-                                            <div className="chart-col"><div className="bar-fill" style={{ height: '60%' }}></div><span className="label">21 Mei</span></div>
+                                            {['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'].map((day, idx) => (
+                                                <div key={idx} className="chart-col">
+                                                    <div className="bar-fill" style={{ height: reportMetrics.totalTickets > 0 ? '20%' : '0%' }}></div>
+                                                    <span className="label">{day}</span>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
@@ -1381,21 +1393,13 @@ export default function AdminDashboard() {
                                                 <span>0</span>
                                             </div>
                                             <div className="rkeu-bar-area">
-                                                {[
-                                                    { label: '15 Mei', pemasukan: 30, pengeluaran: 15 },
-                                                    { label: '16 Mei', pemasukan: 40, pengeluaran: 13 },
-                                                    { label: '17 Mei', pemasukan: 55, pengeluaran: 17 },
-                                                    { label: '18 Mei', pemasukan: 90, pengeluaran: 20 },
-                                                    { label: '19 Mei', pemasukan: 70, pengeluaran: 18 },
-                                                    { label: '20 Mei', pemasukan: 50, pengeluaran: 22 },
-                                                    { label: '21 Mei', pemasukan: 45, pengeluaran: 20 },
-                                                ].map((d, i) => (
+                                                {['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'].map((d, i) => (
                                                     <div key={i} className="rkeu-bar-group">
                                                         <div className="rkeu-bars">
-                                                            <div className="rkeu-bar pemasukan" style={{ height: `${d.pemasukan}%` }}></div>
-                                                            <div className="rkeu-bar pengeluaran" style={{ height: `${d.pengeluaran}%` }}></div>
+                                                            <div className="rkeu-bar pemasukan" style={{ height: reportMetrics.sales > 0 ? '20%' : '0%' }}></div>
+                                                            <div className="rkeu-bar pengeluaran" style={{ height: kpis.outflow > 0 ? '15%' : '0%' }}></div>
                                                         </div>
-                                                        <span className="rkeu-bar-label">{d.label}</span>
+                                                        <span className="rkeu-bar-label">{d}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -1410,11 +1414,16 @@ export default function AdminDashboard() {
                                             <div className="rkeu-donut-wrap">
                                                 <div className="rkeu-donut-svg">
                                                     <svg viewBox="0 0 100 100" width="110" height="110">
-                                                        <circle cx="50" cy="50" r="38" fill="transparent" stroke="#1a73e8" strokeWidth="18" strokeDasharray="120 239" strokeDashoffset="0" transform="rotate(-90 50 50)" />
-                                                        <circle cx="50" cy="50" r="38" fill="transparent" stroke="#10b981" strokeWidth="18" strokeDasharray="64 239" strokeDashoffset="-120" transform="rotate(-90 50 50)" />
-                                                        <circle cx="50" cy="50" r="38" fill="transparent" stroke="#f59e0b" strokeWidth="18" strokeDasharray="23 239" strokeDashoffset="-184" transform="rotate(-90 50 50)" />
-                                                        <circle cx="50" cy="50" r="38" fill="transparent" stroke="#6366f1" strokeWidth="18" strokeDasharray="28 239" strokeDashoffset="-207" transform="rotate(-90 50 50)" />
-                                                        <circle cx="50" cy="50" r="38" fill="transparent" stroke="#ec4899" strokeWidth="18" strokeDasharray="11 239" strokeDashoffset="-235" transform="rotate(-90 50 50)" />
+                                                        <circle cx="50" cy="50" r="38" fill="transparent" stroke="#eff6ff" strokeWidth="18" />
+                                                        {reportMetrics.sales > 0 && (
+                                                            <>
+                                                                <circle cx="50" cy="50" r="38" fill="transparent" stroke="#1a73e8" strokeWidth="18" strokeDasharray={`${(reportMetrics.offlineSales / reportMetrics.sales) * 239} 239`} strokeDashoffset="0" transform="rotate(-90 50 50)" />
+                                                                <circle cx="50" cy="50" r="38" fill="transparent" stroke="#10b981" strokeWidth="18" strokeDasharray={`${(reportMetrics.onlineSales / reportMetrics.sales) * 239} 239`} strokeDashoffset={`-${(reportMetrics.offlineSales / reportMetrics.sales) * 239}`} transform="rotate(-90 50 50)" />
+                                                                <circle cx="50" cy="50" r="38" fill="transparent" stroke="#f59e0b" strokeWidth="18" strokeDasharray={`${(rentals.ban.rev / reportMetrics.sales) * 239} 239`} strokeDashoffset={`-${((reportMetrics.offlineSales + reportMetrics.onlineSales) / reportMetrics.sales) * 239}`} transform="rotate(-90 50 50)" />
+                                                                <circle cx="50" cy="50" r="38" fill="transparent" stroke="#6366f1" strokeWidth="18" strokeDasharray={`${(rentals.gazebo.rev / reportMetrics.sales) * 239} 239`} strokeDashoffset={`-${((reportMetrics.offlineSales + reportMetrics.onlineSales + rentals.ban.rev) / reportMetrics.sales) * 239}`} transform="rotate(-90 50 50)" />
+                                                                <circle cx="50" cy="50" r="38" fill="transparent" stroke="#ec4899" strokeWidth="18" strokeDasharray={`${(rentals.angsa.rev / reportMetrics.sales) * 239} 239`} strokeDashoffset={`-${((reportMetrics.offlineSales + reportMetrics.onlineSales + rentals.ban.rev + rentals.gazebo.rev) / reportMetrics.sales) * 239}`} transform="rotate(-90 50 50)" />
+                                                            </>
+                                                        )}
                                                         <circle cx="50" cy="50" r="25" fill="white" />
                                                     </svg>
                                                 </div>
@@ -1434,9 +1443,14 @@ export default function AdminDashboard() {
                                             <div className="rkeu-donut-wrap">
                                                 <div className="rkeu-donut-svg">
                                                     <svg viewBox="0 0 100 100" width="110" height="110">
-                                                        <circle cx="50" cy="50" r="38" fill="transparent" stroke="#1a73e8" strokeWidth="18" strokeDasharray="134 239" strokeDashoffset="0" transform="rotate(-90 50 50)" />
-                                                        <circle cx="50" cy="50" r="38" fill="transparent" stroke="#10b981" strokeWidth="18" strokeDasharray="101 239" strokeDashoffset="-134" transform="rotate(-90 50 50)" />
-                                                        <circle cx="50" cy="50" r="38" fill="transparent" stroke="#f59e0b" strokeWidth="18" strokeDasharray="10 239" strokeDashoffset="-235" transform="rotate(-90 50 50)" />
+                                                        <circle cx="50" cy="50" r="38" fill="transparent" stroke="#eff6ff" strokeWidth="18" />
+                                                        {reportMetrics.sales > 0 && (
+                                                            <>
+                                                                <circle cx="50" cy="50" r="38" fill="transparent" stroke="#1a73e8" strokeWidth="18" strokeDasharray={`${(reportMetrics.cashSales / reportMetrics.sales) * 239} 239`} strokeDashoffset="0" transform="rotate(-90 50 50)" />
+                                                                <circle cx="50" cy="50" r="38" fill="transparent" stroke="#10b981" strokeWidth="18" strokeDasharray={`${(reportMetrics.qrisSales / reportMetrics.sales) * 239} 239`} strokeDashoffset={`-${(reportMetrics.cashSales / reportMetrics.sales) * 239}`} transform="rotate(-90 50 50)" />
+                                                                <circle cx="50" cy="50" r="38" fill="transparent" stroke="#f59e0b" strokeWidth="18" strokeDasharray={`${(reportMetrics.transferSales / reportMetrics.sales) * 239} 239`} strokeDashoffset={`-${((reportMetrics.cashSales + reportMetrics.qrisSales) / reportMetrics.sales) * 239}`} transform="rotate(-90 50 50)" />
+                                                            </>
+                                                        )}
                                                         <circle cx="50" cy="50" r="25" fill="white" />
                                                     </svg>
                                                 </div>
@@ -1595,22 +1609,14 @@ export default function AdminDashboard() {
                                         <span>800</span><span>600</span><span>400</span><span>200</span><span>0</span>
                                     </div>
                                     <div className="rkeu-stacked-bars">
-                                        {[
-                                            { label: '15 Mei', tunai: 30, qris: 20, transfer: 5 },
-                                            { label: '16 Mei', tunai: 28, qris: 18, transfer: 4 },
-                                            { label: '17 Mei', tunai: 45, qris: 30, transfer: 6 },
-                                            { label: '18 Mei', tunai: 55, qris: 38, transfer: 7 },
-                                            { label: '19 Mei', tunai: 42, qris: 29, transfer: 5 },
-                                            { label: '20 Mei', tunai: 32, qris: 22, transfer: 4 },
-                                            { label: '21 Mei', tunai: 38, qris: 26, transfer: 5 },
-                                        ].map((d, i) => (
+                                        {['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'].map((day, i) => (
                                             <div key={i} className="rkeu-stacked-group">
                                                 <div className="rkeu-stacked-col">
-                                                    <div className="rkeu-seg" style={{ height: `${d.tunai}%`, background: '#1a73e8' }}></div>
-                                                    <div className="rkeu-seg" style={{ height: `${d.qris}%`, background: '#10b981' }}></div>
-                                                    <div className="rkeu-seg" style={{ height: `${d.transfer}%`, background: '#f59e0b' }}></div>
+                                                    <div className="rkeu-seg" style={{ height: reportMetrics.sales > 0 ? '10%' : '0%', background: '#1a73e8' }}></div>
+                                                    <div className="rkeu-seg" style={{ height: reportMetrics.sales > 0 ? '10%' : '0%', background: '#10b981' }}></div>
+                                                    <div className="rkeu-seg" style={{ height: reportMetrics.sales > 0 ? '5%' : '0%', background: '#f59e0b' }}></div>
                                                 </div>
-                                                <span className="rkeu-stacked-label">{d.label}</span>
+                                                <span className="rkeu-stacked-label">{day}</span>
                                             </div>
                                         ))}
                                     </div>
