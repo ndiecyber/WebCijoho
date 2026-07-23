@@ -37,6 +37,40 @@ export default function AdminDashboard() {
     const [showNotifDropdown, setShowNotifDropdown] = useState(false);
     const [selectedPDFTicket, setSelectedPDFTicket] = useState(null);
 
+    // Notifications state
+    const [notifications, setNotifications] = useState([
+        {
+            id: 1,
+            title: 'Sistem Laporan Siap',
+            message: 'Sistem dasbor admin siap digunakan & beroperasi dari angka 0.',
+            time: 'Baru saja',
+            type: 'system',
+            icon: 'fa-circle-check',
+            color: '#10b981',
+            read: false
+        },
+        {
+            id: 2,
+            title: 'Kasir & Reservasi Online',
+            message: 'Mesin POS kasir & booking mobile app tersambung secara real-time.',
+            time: '15 menit lalu',
+            type: 'info',
+            icon: 'fa-cash-register',
+            color: '#3b82f6',
+            read: false
+        },
+        {
+            id: 3,
+            title: 'Pengaturan Jam Operasional',
+            message: 'Jam operasional waterboom diset 08:00 - 17:00 WIB.',
+            time: '1 jam lalu',
+            type: 'warning',
+            icon: 'fa-clock',
+            color: '#f59e0b',
+            read: false
+        }
+    ]);
+
     // Account Switcher State (Instagram Style)
     const [accounts, setAccounts] = useState([
         { id: 1, name: 'Admin Utama', role: 'Super Admin', email: 'admin@cijoho.id', avatarIcon: 'fa-user-shield', badgeColor: '#3b82f6', isOnline: true },
@@ -711,11 +745,141 @@ export default function AdminDashboard() {
                             <i className="fa-solid fa-chevron-down caret"></i>
                         </div>
 
-                        <div className="notif-wrapper" onClick={() => setShowNotifDropdown(!showNotifDropdown)}>
-                            <button className="notif-btn">
+                        <div className="notif-wrapper" style={{ position: 'relative' }}>
+                            <button
+                                className="notif-btn"
+                                onClick={() => {
+                                    setShowNotifDropdown(!showNotifDropdown);
+                                    setShowProfileDropdown(false);
+                                }}
+                            >
                                 <i className="fa-regular fa-bell"></i>
-                                <span className="notif-count-badge">3</span>
+                                {notifications.filter(n => !n.read).length > 0 && (
+                                    <span className="notif-count-badge">
+                                        {notifications.filter(n => !n.read).length}
+                                    </span>
+                                )}
                             </button>
+
+                            {showNotifDropdown && (
+                                <div className="notif-dropdown-menu" style={{
+                                    position: 'absolute',
+                                    top: 'calc(100% + 10px)',
+                                    right: '0',
+                                    width: '340px',
+                                    backgroundColor: '#ffffff',
+                                    borderRadius: '16px',
+                                    boxShadow: '0 12px 32px rgba(15, 23, 42, 0.18)',
+                                    border: '1px solid #e2e8f0',
+                                    zIndex: 1000,
+                                    overflow: 'hidden',
+                                    fontFamily: "'Inter', sans-serif"
+                                }}>
+                                    <div style={{
+                                        padding: '14px 16px',
+                                        borderBottom: '1px solid #f1f5f9',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        backgroundColor: '#f8fafc'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <i className="fa-solid fa-bell" style={{ color: '#2563eb' }}></i>
+                                            <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>Notifikasi Sistem</strong>
+                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                                            }}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#2563eb',
+                                                fontSize: '0.78rem',
+                                                fontWeight: 700,
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            Tandai Dibaca
+                                        </button>
+                                    </div>
+
+                                    <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
+                                        {notifications.length === 0 ? (
+                                            <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>
+                                                Tidak ada notifikasi baru
+                                            </div>
+                                        ) : (
+                                            notifications.map(notif => (
+                                                <div
+                                                    key={notif.id}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+                                                    }}
+                                                    style={{
+                                                        padding: '12px 16px',
+                                                        borderBottom: '1px solid #f8fafc',
+                                                        display: 'flex',
+                                                        gap: '12px',
+                                                        backgroundColor: notif.read ? '#ffffff' : '#f0f9ff',
+                                                        cursor: 'pointer',
+                                                        transition: 'background-color 0.2s ease'
+                                                    }}
+                                                >
+                                                    <div style={{
+                                                        width: '36px',
+                                                        height: '36px',
+                                                        borderRadius: '10px',
+                                                        backgroundColor: `${notif.color}15`,
+                                                        color: notif.color,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        flexShrink: 0,
+                                                        fontSize: '0.95rem'
+                                                    }}>
+                                                        <i className={`fa-solid ${notif.icon}`}></i>
+                                                    </div>
+                                                    <div style={{ flexGrow: 1 }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                                                            <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a' }}>{notif.title}</span>
+                                                            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{notif.time}</span>
+                                                        </div>
+                                                        <p style={{ margin: 0, fontSize: '0.78rem', color: '#475569', lineHeight: 1.35 }}>{notif.message}</p>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    <div style={{
+                                        padding: '10px',
+                                        textAlign: 'center',
+                                        backgroundColor: '#f8fafc',
+                                        borderTop: '1px solid #f1f5f9'
+                                    }}>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setShowNotifDropdown(false);
+                                                setActiveTab('transaksi');
+                                            }}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#2563eb',
+                                                fontSize: '0.82rem',
+                                                fontWeight: 700,
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            Lihat Semua Log Transaksi <i className="fa-solid fa-arrow-right" style={{ fontSize: '0.75rem', marginLeft: '4px' }}></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="user-profile-dropdown-container">
