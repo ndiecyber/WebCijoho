@@ -5,22 +5,40 @@ import { supabase } from '../supabase'; // Pastikan path ini sesuai dengan struk
 // Helper date range parser & comparator for Indonesian & ISO formats
 const parseDateToTimestamp = (str) => {
     if (!str) return null;
-    const d = new Date(str);
-    if (!isNaN(d.getTime())) return d.getTime();
+    if (typeof str === 'number') return str;
+    const strClean = String(str).trim();
+    // Check ISO string first (e.g. 2026-09-05...)
+    if (/^\d{4}-\d{2}-\d{2}/.test(strClean)) {
+        const d = new Date(strClean);
+        if (!isNaN(d.getTime())) return d.getTime();
+    }
+    // Check DD/MM/YYYY or D/M/YYYY (e.g. 5/9/2026 or 05/09/2026)
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(strClean)) {
+        const parts = strClean.split('/');
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+            return new Date(year, month, day).getTime();
+        }
+    }
+    // Check Indonesian month names (e.g. "5 September 2026")
     const monthsIndo = {
         januari: 0, februari: 1, maret: 2, april: 3, mei: 4, juni: 5,
         juli: 6, agustus: 7, september: 8, oktober: 9, november: 10, desember: 11,
-        jan: 0, feb: 1, mar: 2, apr: 3, jun: 5, jul: 6, agt: 7, sep: 8, okt: 9, nov: 10, des: 11
+        jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, jun: 5, jul: 6, agt: 7, ags: 7, sep: 8, okt: 9, nov: 10, des: 11
     };
-    const parts = String(str).toLowerCase().split(' ');
-    if (parts.length >= 3) {
-        const day = parseInt(parts[0]);
-        const month = monthsIndo[parts[1]];
-        const year = parseInt(parts[2]);
+    const words = strClean.toLowerCase().split(/\s+/);
+    if (words.length >= 3) {
+        const day = parseInt(words[0], 10);
+        const month = monthsIndo[words[1]];
+        const year = parseInt(words[2], 10);
         if (!isNaN(day) && month !== undefined && !isNaN(year)) {
             return new Date(year, month, day).getTime();
         }
     }
+    const fallback = new Date(strClean);
+    if (!isNaN(fallback.getTime())) return fallback.getTime();
     return null;
 };
 
@@ -60,21 +78,30 @@ export default function AdminDashboard() {
 
         // Mapping ke format yang digunakan di dashboard dengan Jam Booking & Kategori (Beli vs Sewa)
         const historyData = data.map(tx => {
-          const txDate = new Date(tx.created_at || Date.now());
-          const dateFormatted = txDate.toLocaleDateString('id-ID');
-          const timeFormatted = txDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
-          const isRental = (tx.ticket_type && (tx.ticket_type.toLowerCase().includes('sewa') || tx.ticket_type.toLowerCase().includes('ban') || tx.ticket_type.toLowerCase().includes('gazebo') || tx.ticket_type.toLowerCase().includes('angsa')));
+          const createdAt = new Date(tx.created_at || Date.now());
+          const isRental = (tx.transaction_type === 'sewa') ||
+            ['ban', 'angsa', 'gazebo', 'sepeda'].includes((tx.ticket_type || '').toLowerCase()) ||
+            (tx.ticket_type && tx.ticket_type.toLowerCase().includes('sewa'));
+          const isBeli = !isRental;
           const categoryType = isRental ? 'Sewa' : 'Beli';
 
           return {
             code: tx.booking_code,
-            date: dateFormatted,
-            time: timeFormatted,
+            date: createdAt.toLocaleDateString('id-ID'),
+            time: createdAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+            dateTime: `${createdAt.toLocaleDateString('id-ID')} ${createdAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`,
+            created_at: tx.created_at,
             category: categoryType,
-            type: tx.ticket_type === 'regular' ? 'Tiket Masuk' :
-                  tx.ticket_type === 'rombongan' ? 'Tiket Rombongan' :
-                  tx.ticket_type === 'kursus' ? 'Kursus Renang' : (isRental ? 'Sewa Layanan' : tx.ticket_type),
-            product: tx.ticket_type,
+            type: tx.ticket_type === 'regular' || tx.ticket_type === 'reguler' ? 'Beli Tiket Masuk' :
+                  tx.ticket_type === 'rombongan' ? 'Beli Tiket Rombongan' :
+                  tx.ticket_type === 'kursus' ? 'Beli Tiket Kursus Renang' :
+                  (isRental ? `Sewa ${tx.ticket_type === 'ban' ? 'Ban' : tx.ticket_type === 'gazebo' ? 'Gazebo' : tx.ticket_type === 'angsa' ? 'Sepeda Air' : 'Layanan'}` : 'Beli Tiket'),
+            product: tx.ticket_type === 'ban' ? 'Sewa Ban' :
+                     tx.ticket_type === 'gazebo' ? 'Sewa Gazebo' :
+                     tx.ticket_type === 'angsa' ? 'Sewa Sepeda Air / Angsa' :
+                     tx.ticket_type === 'reguler' || tx.ticket_type === 'regular' ? 'Tiket Reguler' :
+                     tx.ticket_type === 'rombongan' ? 'Tiket Rombongan' :
+                     tx.ticket_type === 'kursus' ? 'Kursus Renang' : tx.ticket_type,
             qty: tx.quantity,
             total: tx.total_price,
             channel: tx.channel === 'online' ? 'Online' : 'Offline',
@@ -85,9 +112,25 @@ export default function AdminDashboard() {
           };
         });
 
-        setHistory(historyData);
-        // Simpan ke localStorage sebagai cache
-        localStorage.setItem('waterboom_sales_history', JSON.stringify(historyData));
+        // Gabungkan transaksi Supabase dengan cache lokal (agar tidak ada transaksi lokal sebelumnya yang hilang)
+        const saved = localStorage.getItem('waterboom_sales_history');
+        let combined = [...historyData];
+        if (saved) {
+          try {
+            const localItems = JSON.parse(saved);
+            const existingCodes = new Set(historyData.map(h => h.code));
+            localItems.forEach(item => {
+              if (item && item.code && !existingCodes.has(item.code)) {
+                combined.push(item);
+              }
+            });
+          } catch (e) {
+            console.warn('Error merging local history:', e);
+          }
+        }
+
+        setHistory(combined);
+        localStorage.setItem('waterboom_sales_history', JSON.stringify(combined));
       } catch (err) {
         console.error('Error:', err);
         // Fallback ke localStorage
@@ -131,25 +174,11 @@ export default function AdminDashboard() {
         return `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
     };
 
-    const [datePreset, setDatePreset] = useState('7days');
-    const [customStartDate, setCustomStartDate] = useState(() => {
-        const d = new Date();
-        d.setDate(d.getDate() - 6);
-        return getISOString(d);
-    });
-    const [customEndDate, setCustomEndDate] = useState(() => getISOString(new Date()));
-    const [dateRangeLabel, setDateRangeLabel] = useState(() => {
-        const d = new Date();
-        const start = new Date();
-        start.setDate(d.getDate() - 6);
-        return `${formatShortIndoDate(start)} - ${formatShortIndoDate(d)}`;
-    });
-    const [dateRange, setDateRange] = useState(() => {
-        const d = new Date();
-        const start = new Date();
-        start.setDate(d.getDate() - 6);
-        return `${formatShortIndoDate(start)} - ${formatShortIndoDate(d)}`;
-    });
+    const [datePreset, setDatePreset] = useState('all');
+    const [customStartDate, setCustomStartDate] = useState(null);
+    const [customEndDate, setCustomEndDate] = useState(null);
+    const [dateRangeLabel, setDateRangeLabel] = useState('Semua Waktu (All Time)');
+    const [dateRange, setDateRange] = useState('Semua Waktu (All Time)');
     const [showDateRangeDropdown, setShowDateRangeDropdown] = useState(false);
 
     const applyDatePreset = (presetKey, customStart = null, customEnd = null) => {
@@ -303,12 +332,12 @@ export default function AdminDashboard() {
     // Dynamic Filtered Datasets based on Date Range Selector
     const dateFilteredHistory = useMemo(() => {
         if (datePreset === 'all' || !customStartDate || !customEndDate) return history;
-        return history.filter(item => isDateInRange(item.date || item.created_at, customStartDate, customEndDate));
+        return history.filter(item => isDateInRange(item.created_at || item.rawDate || item.date, customStartDate, customEndDate));
     }, [history, datePreset, customStartDate, customEndDate]);
 
     const dateFilteredExpenditures = useMemo(() => {
         if (datePreset === 'all' || !customStartDate || !customEndDate) return expenditures;
-        return expenditures.filter(item => isDateInRange(item.date || item.created_at, customStartDate, customEndDate));
+        return expenditures.filter(item => isDateInRange(item.created_at || item.date, customStartDate, customEndDate));
     }, [expenditures, datePreset, customStartDate, customEndDate]);
     const [systemSettings, setSystemSettings] = useState({
         businessName: 'Waterboom Cijoho Indah',
@@ -454,8 +483,10 @@ export default function AdminDashboard() {
         // Refresh data setiap 30 detik
         const interval = setInterval(fetchTransactions, 30000);
         window.addEventListener('storage', loadAllData);
-        return () => window.removeEventListener('storage', loadAllData);
-        clearInterval(interval);
+        return () => {
+            window.removeEventListener('storage', loadAllData);
+            clearInterval(interval);
+        };
     }, []);
 
     // --- Hitung KPI setiap kali dateFilteredHistory atau dateFilteredExpenditures berubah ---
@@ -470,7 +501,7 @@ export default function AdminDashboard() {
         let totalOutflow = 0;
         dateFilteredExpenditures.forEach(e => totalOutflow += Number(e.amount) || 0);
 
-        const ticketRows = dateFilteredHistory.filter(i => (i.type && i.type.includes('Tiket')) || (i.qty && i.qty > 0));
+        const ticketRows = dateFilteredHistory.filter(i => i.type && i.type.startsWith('Beli'));
         const visitors = ticketRows.reduce((sum, r) => sum + (Number(r.qty) || 0), 0);
 
         setKpis({
@@ -557,27 +588,33 @@ export default function AdminDashboard() {
 
         dateFilteredHistory.forEach(item => {
             const itemTotal = Number(item.total) || 0;
-            const qty = Number(item.qty) || 1;
+            const qty = Number(item.qty) || 0;
+            const isBeli = (item.category === 'Beli') || (item.type && item.type.startsWith('Beli'));
+            const isOnline = item.channel === 'Online' || (item.code && item.code.startsWith('WCI-'));
+
             sales += itemTotal;
 
-            const isOnline = item.channel === 'Online' || (item.code && item.code.startsWith('WCI-'));
-            if (isOnline) {
-                onlineSales += itemTotal;
-                onlineTickets += qty;
-            } else {
-                offlineSales += itemTotal;
-                offlineTickets += qty;
+            // Hanya tiket masuk (beli) yang dihitung untuk tiket
+            if (isBeli) {
+                if (isOnline) {
+                    onlineSales += itemTotal;
+                    onlineTickets += qty;
+                } else {
+                    offlineSales += itemTotal;
+                    offlineTickets += qty;
+                }
+
+                const prod = (item.product || item.type || '').toLowerCase();
+                if (prod.includes('rombongan')) {
+                    rombonganSales += itemTotal;
+                    rombonganTickets += qty;
+                } else if (prod.includes('reguler') || prod.includes('tiket') || prod.includes('masuk')) {
+                    regulerSales += itemTotal;
+                    regulerTickets += qty;
+                }
             }
 
-            const prod = (item.product || item.type || '').toLowerCase();
-            if (prod.includes('rombongan')) {
-                rombonganSales += itemTotal;
-                rombonganTickets += qty;
-            } else if (prod.includes('reguler') || prod.includes('tiket')) {
-                regulerSales += itemTotal;
-                regulerTickets += qty;
-            }
-
+            // Metode pembayaran dihitung untuk semua transaksi (beli + sewa)
             const method = (item.method || item.paymentMethod || '').toLowerCase();
             if (method.includes('qris')) {
                 qrisSales += itemTotal;
@@ -1612,7 +1649,7 @@ export default function AdminDashboard() {
                                                         <td colSpan="9" style={{ textAlign: 'center', color: '#94a3b8', padding: '24px' }}>Belum ada data penjualan.</td>
                                                     </tr>
                                                 ) : (
-                                                    filteredHistory.slice(0, 5).map((item, idx) => (
+                                                    filteredHistory.slice(0, 10).map((item, idx) => (
                                                         <tr key={idx}>
                                                             <td className="text-secondary">
                                                                 <div style={{ fontWeight: 700, color: '#0f172a' }}>{item.date}</div>
@@ -1786,8 +1823,9 @@ export default function AdminDashboard() {
                                 <table className="superadmin-table">
                                     <thead>
                                         <tr>
-                                            <th>Tanggal</th>
+                                            <th>Tanggal & Jam</th>
                                             <th>Kode Transaksi</th>
+                                            <th>Kategori</th>
                                             <th>Jenis</th>
                                             <th>Channel</th>
                                             <th>Produk</th>
@@ -1822,7 +1860,7 @@ export default function AdminDashboard() {
                                                             {item.category || 'Beli'}
                                                         </span>
                                                     </td>
-                                                    <td><span className={`type-badge ${item.type.includes('Tiket') ? 'ticket' : 'rental'}`}>{item.type}</span></td>
+                                                    <td><span className={`type-badge ${item.category === 'Beli' ? 'ticket' : 'rental'}`}><i className={`fa-solid ${item.category === 'Beli' ? 'fa-ticket' : 'fa-parachute-box'}`}></i> {item.type}</span></td>
                                                     <td><span className={`channel-badge ${item.channel === 'Offline' ? 'offline' : 'online'}`}>{item.channel}</span></td>
                                                     <td>{item.product || item.type}</td>
                                                     <td>{item.qty} Pcs</td>
@@ -1840,7 +1878,7 @@ export default function AdminDashboard() {
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan="9" className="table-empty-row">Tidak ada data transaksi yang cocok.</td>
+                                                <td colSpan="10" className="table-empty-row">Tidak ada data transaksi yang cocok.</td>
                                             </tr>
                                         )}
                                     </tbody>
@@ -1886,15 +1924,34 @@ export default function AdminDashboard() {
                                     <table className="superadmin-table">
                                         <thead>
                                             <tr>
-                                                <th>Tanggal</th><th>No. Transaksi</th><th>Jenis Pemasukan</th><th>Channel</th><th>Item / Produk</th><th>Qty</th><th>Total Nominal</th><th>Metode</th>
+                                                <th>Tanggal & Jam</th><th>No. Transaksi</th><th>Kategori</th><th>Jenis Pemasukan</th><th>Channel</th><th>Item / Produk</th><th>Qty</th><th>Total Nominal</th><th>Metode</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {filteredHistory.map((item, idx) => (
                                                 <tr key={idx}>
-                                                    <td className="text-secondary">{item.date}</td>
+                                                    <td className="text-secondary">
+                                                        <div style={{ fontWeight: 700, color: '#0f172a' }}>{item.date}</div>
+                                                        <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>⏰ {item.time || '08:30 WIB'}</div>
+                                                    </td>
                                                     <td className="font-bold">{item.code}</td>
-                                                    <td><span className={`type-badge ${item.type === 'Tiket Masuk' ? 'ticket' : 'rental'}`}>{item.type}</span></td>
+                                                    <td>
+                                                        <span style={{
+                                                            padding: '3px 8px',
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.72rem',
+                                                            fontWeight: 800,
+                                                            backgroundColor: item.category === 'Sewa' ? '#fef3c7' : '#dbeafe',
+                                                            color: item.category === 'Sewa' ? '#92400e' : '#1e40af',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px'
+                                                        }}>
+                                                            <i className={`fa-solid ${item.category === 'Sewa' ? 'fa-key' : 'fa-cart-shopping'}`}></i>
+                                                            {item.category || 'Beli'}
+                                                        </span>
+                                                    </td>
+                                                    <td><span className={`type-badge ${item.category === 'Beli' ? 'ticket' : 'rental'}`}><i className={`fa-solid ${item.category === 'Beli' ? 'fa-ticket' : 'fa-parachute-box'}`}></i> {item.type}</span></td>
                                                     <td><span className={`channel-badge ${item.channel === 'Offline' ? 'offline' : 'online'}`}>{item.channel}</span></td>
                                                     <td>{item.product}</td>
                                                     <td>{item.qty}</td>
@@ -2193,16 +2250,16 @@ export default function AdminDashboard() {
                                             <a href="#/admin" onClick={(e) => { e.preventDefault(); setActiveTab('transaksi'); }} className="rkeu-lihat">Lihat Semua</a>
                                         </div>
                                         <table className="rkeu-table">
-                                            <thead><tr><th>Tanggal</th><th>No. TRX</th><th>Jenis</th><th>Total</th><th>Metode</th></tr></thead>
+                                            <thead><tr><th>Tanggal & Jam</th><th>No. TRX</th><th>Jenis</th><th>Total</th><th>Metode</th></tr></thead>
                                             <tbody>
                                                 {history.length === 0 ? (
                                                     <tr><td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '16px' }}>Belum ada data penjualan</td></tr>
                                                 ) : (
                                                     history.slice(0, 5).map((item, idx) => (
                                                         <tr key={idx}>
-                                                            <td>{item.date}</td>
+                                                            <td>{item.dateTime || item.date}</td>
                                                             <td>{item.code}</td>
-                                                            <td><span className={`rkeu-badge ${item.type === 'Tiket Masuk' ? 'blue' : 'green'}`}>{item.type}</span></td>
+                                                            <td><span className={`rkeu-badge ${item.category === 'Beli' ? 'blue' : 'green'}`}>{item.type}</span></td>
                                                             <td>Rp {(item.total || 0).toLocaleString('id-ID')}</td>
                                                             <td>{item.method || 'Tunai'}</td>
                                                         </tr>

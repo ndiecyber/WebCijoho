@@ -141,27 +141,37 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
     // --- Fungsi bantu untuk menyimpan transaksi ke Supabase ---
     const saveTransactionToSupabase = async (bookingCode, items, paymentMethod, cashierName, customerName, status = 'lunas', channel = 'offline') => {
         try {
-            const rows = items.map(item => ({
-                booking_code: bookingCode,
-                ticket_type: item.ticket_type,
-                quantity: item.quantity,
-                total_price: item.total_price,
-                customer_name: customerName || 'Pengunjung',
-                status: status,
-                payment_method: paymentMethod,
-                channel: channel,
-                cashier_name: cashierName || 'Petugas Kasir',
-                created_at: new Date().toISOString()
-            }));
+            const rows = items.map(item => {
+                // Tentukan transaction_type otomatis: ban, angsa, gazebo, sepeda selalu 'sewa'
+                const isRental = ['ban', 'angsa', 'gazebo', 'sepeda'].includes((item.ticket_type || '').toLowerCase()) ||
+                                 (item.ticket_type && item.ticket_type.toLowerCase().includes('sewa'));
+                const type = isRental ? 'sewa' : 'beli';
+
+                return {
+                    booking_code: bookingCode,
+                    ticket_type: item.ticket_type,
+                    transaction_type: type,
+                    quantity: item.quantity,
+                    total_price: item.total_price,
+                    customer_name: customerName || 'Pengunjung',
+                    status: status,
+                    payment_method: paymentMethod,
+                    channel: channel,
+                    cashier_name: cashierName || 'Petugas Kasir',
+                    created_at: new Date().toISOString()
+                };
+            });
 
             const { data, error } = await supabase.from('transactions').insert(rows);
             if (error) {
-                console.warn('Simpan Supabase dilewati/gagal:', error.message);
+                console.error('Gagal menyimpan ke Supabase:', error);
+                alert(`Gagal Menyimpan Transaksi: ${error.message}`);
                 return false;
             }
             return true;
         } catch (err) {
-            console.warn('Error koneksi Supabase:', err.message);
+            console.error('Error Supabase:', err);
+            alert(`Terjadi Kesalahan: ${err.message}`);
             return false;
         }
     };
@@ -220,7 +230,7 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
         const paymentMethodStr = paymentMethod === 'cash' ? 'tunai' : 'qris';
 
         // Simpan ke Supabase
-        saveTransactionToSupabase(
+        await saveTransactionToSupabase(
             receiptCode,
             items,
             paymentMethodStr,
@@ -234,23 +244,28 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
         const newReceipt = {
             code: receiptCode,
             date: visitDate,
-            time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+            time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
             cashierName: 'Petugas Kasir 1',
+            category: hasTickets ? 'Beli' : 'Sewa',
             type: typeName,
-            qty: ticketQty,
+            qty: hasTickets ? ticketQty : (sewaBan + sewaSepeda + sewaGazebo),
             ticketPrice: ticketPrice,
             subtotal: subtotal,
             rentals: { ban: sewaBan, sepeda: sewaSepeda, gazebo: sewaGazebo },
             total: grandTotal,
             paymentMethod: paymentMethodStr === 'tunai' ? 'Tunai (Cash)' : 'QRIS / EDC',
+            method: paymentMethodStr === 'tunai' ? 'Tunai' : 'QRIS',
+            channel: 'Offline',
             paidAmount: paidAmount,
             change: change >= 0 ? change : 0,
-            status: 'Lunas - Struk Loket Fisik'
+            status: 'Lunas - Struk Loket Fisik',
+            created_at: new Date().toISOString()
         };
 
         const updatedHistory = [newReceipt, ...historyList];
         setHistoryList(updatedHistory);
         localStorage.setItem('waterboom_sales_history', JSON.stringify(updatedHistory));
+        window.dispatchEvent(new Event('storage'));
         setOfflineReceiptData(newReceipt);
 
         setShowOfflinePOSModal(false);
@@ -317,7 +332,7 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
         }
 
         // Simpan ke Supabase
-        saveTransactionToSupabase(
+        await saveTransactionToSupabase(
             bookingCode,
             items,
             'qris',
@@ -330,32 +345,44 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
         const newTicketObj = {
             code: bookingCode,
             date: visitDate,
+            time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
             name: buyerName,
             phone: buyerPhone,
+            category: hasTickets ? 'Beli' : 'Sewa',
             type: typeName,
             ticketTypeKey: selectedTicket,
-            qty: ticketQty,
+            qty: hasTickets ? ticketQty : (sewaBan + sewaSepeda + sewaGazebo),
             ticketPrice: ticketPrice,
             subtotal: subtotal,
             rentals: { ban: sewaBan, sepeda: sewaSepeda, gazebo: sewaGazebo },
             rentalsPrice: { ban: PRICES.rentals.ban, sepeda: PRICES.rentals.sepeda, gazebo: PRICES.rentals.gazebo },
-            total: grandTotal
+            total: grandTotal,
+            channel: 'Online',
+            method: 'QRIS',
+            status: isCashierMode ? 'Lunas - E-Tiket PDF' : 'Menunggu PDF WA Admin',
+            created_at: new Date().toISOString()
         };
 
         const updatedHistory = [{
             code: bookingCode,
             date: visitDate,
+            time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
             name: buyerName,
             phone: buyerPhone,
+            category: hasTickets ? 'Beli' : 'Sewa',
             type: typeName,
-            qty: ticketQty,
+            qty: hasTickets ? ticketQty : (sewaBan + sewaSepeda + sewaGazebo),
             total: grandTotal,
+            channel: 'Online',
+            method: 'QRIS',
             status: isCashierMode ? 'Lunas - E-Tiket PDF' : 'Menunggu PDF WA Admin',
+            created_at: new Date().toISOString(),
             details: newTicketObj
         }, ...historyList];
 
         setHistoryList(updatedHistory);
         localStorage.setItem('waterboom_sales_history', JSON.stringify(updatedHistory));
+        window.dispatchEvent(new Event('storage'));
         setActiveTicketData(newTicketObj);
         setPdfTicketData(newTicketObj);
 

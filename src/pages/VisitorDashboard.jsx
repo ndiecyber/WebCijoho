@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MobileAppView from '../components/MobileAppView';
+import { supabase } from '../supabase';
 
 export default function VisitorDashboard() {
     const navigate = useNavigate();
@@ -36,7 +37,7 @@ export default function VisitorDashboard() {
     const subtotalRentals = (sewaBan * RENTAL_PRICES.ban) + (sewaSepeda * RENTAL_PRICES.sepeda) + (sewaGazebo * RENTAL_PRICES.gazebo);
     const grandTotal = subtotalTickets + subtotalRentals;
 
-    const handleSendWhatsAppOrder = (e) => {
+    const handleSendWhatsAppOrder = async (e) => {
         if (e && e.preventDefault) e.preventDefault();
 
         const ticketName = selectedTicket === 'reguler' ? 'Tiket Reguler' : selectedTicket === 'rombongan' ? 'Tiket Rombongan' : 'Kursus Renang';
@@ -48,38 +49,128 @@ export default function VisitorDashboard() {
         if (sewaGazebo > 0) rentalsText += `\n• Sewa Gazebo: ${sewaGazebo}x (Rp ${(sewaGazebo * RENTAL_PRICES.gazebo).toLocaleString('id-ID')})`;
 
         const bookingCode = 'WCI-' + Math.floor(100000 + Math.random() * 900000);
+        const currentTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+        const hasTickets = ticketQty > 0;
+        const hasRentals = (sewaBan > 0 || sewaSepeda > 0 || sewaGazebo > 0);
+        const categoryType = hasTickets ? 'Beli' : 'Sewa';
+        const typeName = hasTickets && hasRentals ? `${ticketName} + Sewa` : hasTickets ? ticketName : 'Sewa Layanan / Add-on';
+
         const newTicketObj = {
             code: bookingCode,
             date: formattedDate,
-            name: 'Pengunjung Waterboom',
-            phone: '-',
-            type: ticketName,
+            time: currentTime,
+            dateTime: `${formattedDate} ${currentTime}`,
+            name: visitorName || 'Pengunjung Online',
+            phone: visitorPhone || '-',
+            category: categoryType,
+            type: typeName,
             ticketTypeKey: selectedTicket,
-            qty: ticketQty,
+            qty: hasTickets ? ticketQty : (sewaBan + sewaSepeda + sewaGazebo),
             ticketPrice: ticketUnitPrice,
             subtotal: subtotalTickets,
             rentals: { ban: sewaBan, sepeda: sewaSepeda, gazebo: sewaGazebo },
             total: grandTotal,
             channel: 'Online',
+            method: 'QRIS',
             mode: 'online',
-            status: 'Lunas - E-Tiket PDF'
+            status: 'Menunggu Konfirmasi Admin',
+            created_at: new Date().toISOString()
         };
 
         const existingHistory = JSON.parse(localStorage.getItem('waterboom_sales_history') || '[]');
         const updatedHistory = [{
             code: bookingCode,
             date: formattedDate,
-            name: 'Pengunjung Waterboom',
-            phone: '-',
-            type: ticketName,
-            qty: ticketQty,
+            time: currentTime,
+            dateTime: `${formattedDate} ${currentTime}`,
+            name: visitorName || 'Pengunjung Online',
+            phone: visitorPhone || '-',
+            category: categoryType,
+            type: typeName,
+            qty: hasTickets ? ticketQty : (sewaBan + sewaSepeda + sewaGazebo),
             total: grandTotal,
             channel: 'Online',
+            method: 'QRIS',
             mode: 'online',
-            status: 'Lunas - E-Tiket PDF',
+            status: 'Menunggu Konfirmasi Admin',
+            created_at: new Date().toISOString(),
             details: newTicketObj
         }, ...existingHistory];
         localStorage.setItem('waterboom_sales_history', JSON.stringify(updatedHistory));
+        window.dispatchEvent(new Event('storage'));
+
+        // --- Simpan ke Supabase ---
+        try {
+            const supabaseItems = [];
+            if (ticketQty > 0) {
+                supabaseItems.push({
+                    booking_code: bookingCode,
+                    ticket_type: selectedTicket,
+                    transaction_type: 'beli',
+                    quantity: ticketQty,
+                    total_price: subtotalTickets,
+                    customer_name: visitorName || 'Pengunjung Online',
+                    status: 'pending',
+                    payment_method: 'qris',
+                    channel: 'online',
+                    cashier_name: 'Online Booking',
+                    created_at: new Date().toISOString()
+                });
+            }
+            if (sewaBan > 0) {
+                supabaseItems.push({
+                    booking_code: bookingCode,
+                    ticket_type: 'ban',
+                    transaction_type: 'sewa',
+                    quantity: sewaBan,
+                    total_price: sewaBan * RENTAL_PRICES.ban,
+                    customer_name: visitorName || 'Pengunjung Online',
+                    status: 'pending',
+                    payment_method: 'qris',
+                    channel: 'online',
+                    cashier_name: 'Online Booking',
+                    created_at: new Date().toISOString()
+                });
+            }
+            if (sewaSepeda > 0) {
+                supabaseItems.push({
+                    booking_code: bookingCode,
+                    ticket_type: 'angsa',
+                    transaction_type: 'sewa',
+                    quantity: sewaSepeda,
+                    total_price: sewaSepeda * RENTAL_PRICES.sepeda,
+                    customer_name: visitorName || 'Pengunjung Online',
+                    status: 'pending',
+                    payment_method: 'qris',
+                    channel: 'online',
+                    cashier_name: 'Online Booking',
+                    created_at: new Date().toISOString()
+                });
+            }
+            if (sewaGazebo > 0) {
+                supabaseItems.push({
+                    booking_code: bookingCode,
+                    ticket_type: 'gazebo',
+                    transaction_type: 'sewa',
+                    quantity: sewaGazebo,
+                    total_price: sewaGazebo * RENTAL_PRICES.gazebo,
+                    customer_name: visitorName || 'Pengunjung Online',
+                    status: 'pending',
+                    payment_method: 'qris',
+                    channel: 'online',
+                    cashier_name: 'Online Booking',
+                    created_at: new Date().toISOString()
+                });
+            }
+            if (supabaseItems.length > 0) {
+                const { error } = await supabase.from('transactions').insert(supabaseItems);
+                if (error) {
+                    console.error('Simpan Supabase gagal (desktop online):', error.message);
+                }
+            }
+        } catch (err) {
+            console.error('Error koneksi Supabase (desktop online):', err.message);
+        }
 
         let rentalsTextArray = [];
         if (sewaBan > 0) rentalsTextArray.push(`• ${sewaBan}x Sewa Ban (Rp ${(sewaBan * RENTAL_PRICES.ban).toLocaleString('id-ID')})`);
@@ -344,6 +435,48 @@ Mohon informasi metode pembayaran dan pengiriman *Tiket Resmi PDF*. Terima kasih
                                 </div>
 
                                 <form onSubmit={handleSendWhatsAppOrder} style={{ marginTop: '20px', paddingTop: '18px', borderTop: '1px solid #e2e8f0' }}>
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f2942', display: 'block', marginBottom: '5px' }}>
+                                            <i className="fa-solid fa-user" style={{ color: '#2563eb', marginRight: '5px' }}></i> Nama Lengkap Pemesan:
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={visitorName}
+                                            onChange={(e) => setVisitorName(e.target.value)}
+                                            placeholder="Contoh: Budi Santoso"
+                                            required
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 14px',
+                                                borderRadius: '10px',
+                                                border: '1.5px solid #cbd5e1',
+                                                fontSize: '0.9rem',
+                                                boxSizing: 'border-box',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    </div>
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f2942', display: 'block', marginBottom: '5px' }}>
+                                            <i className="fa-brands fa-whatsapp" style={{ color: '#16a34a', marginRight: '5px' }}></i> No. WhatsApp Pemesan:
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={visitorPhone}
+                                            onChange={(e) => setVisitorPhone(e.target.value)}
+                                            placeholder="Contoh: 08123456789"
+                                            required
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 14px',
+                                                borderRadius: '10px',
+                                                border: '1.5px solid #cbd5e1',
+                                                fontSize: '0.9rem',
+                                                boxSizing: 'border-box',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    </div>
                                     <button 
                                         type="submit"
                                         style={{

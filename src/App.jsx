@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import './App.css';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -45,6 +45,7 @@ function AppContent() {
   const [selectedTicket, setSelectedTicket] = useState('reguler');
   const [bookingDetails, setBookingDetails] = useState(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     // Fix invalid HashRouter URLs like /login#/ or /login
