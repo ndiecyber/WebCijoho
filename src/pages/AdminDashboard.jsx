@@ -2039,7 +2039,7 @@ export default function AdminDashboard() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {filteredExpenditures.map((item, idx) => (
+                                            {dateFilteredExpenditures.map((item, idx) => (
                                                 <tr key={idx}>
                                                     <td>{item.date}</td>
                                                     <td><span className="category-badge-simple">{item.category}</span></td>
