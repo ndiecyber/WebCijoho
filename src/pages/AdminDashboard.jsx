@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase'; // Pastikan path ini sesuai dengan struktur folder Anda
+import { TicketReceipt, InvoiceReceipt, AddonReceipt, FullPackageReceipt, DirectPrintPortal } from '../components/TicketPrintReceipts';
 
 // Helper date range parser & comparator for Indonesian & ISO formats
 const parseDateToTimestamp = (str) => {
@@ -58,87 +59,87 @@ export default function AdminDashboard() {
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFilter, setSelectedFilter] = useState('all');
-    
+
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(false);
 
     const fetchTransactions = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('transactions')
-          .select('*')
-          .order('created_at', { ascending: false });
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('transactions')
+                .select('*')
+                .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Error fetching transactions:', error);
-          setLoading(false);
-          return;
-        }
+            if (error) {
+                console.error('Error fetching transactions:', error);
+                setLoading(false);
+                return;
+            }
 
-        // Mapping ke format yang digunakan di dashboard dengan Jam Booking & Kategori (Beli vs Sewa)
-        const historyData = data.map(tx => {
-          const createdAt = new Date(tx.created_at || Date.now());
-          const isRental = (tx.transaction_type === 'sewa') ||
-            ['ban', 'angsa', 'gazebo', 'sepeda'].includes((tx.ticket_type || '').toLowerCase()) ||
-            (tx.ticket_type && tx.ticket_type.toLowerCase().includes('sewa'));
-          const isBeli = !isRental;
-          const categoryType = isRental ? 'Sewa' : 'Beli';
+            // Mapping ke format yang digunakan di dashboard dengan Jam Booking & Kategori (Beli vs Sewa)
+            const historyData = data.map(tx => {
+                const createdAt = new Date(tx.created_at || Date.now());
+                const isRental = (tx.transaction_type === 'sewa') ||
+                    ['ban', 'angsa', 'gazebo', 'sepeda'].includes((tx.ticket_type || '').toLowerCase()) ||
+                    (tx.ticket_type && tx.ticket_type.toLowerCase().includes('sewa'));
+                const isBeli = !isRental;
+                const categoryType = isRental ? 'Sewa' : 'Beli';
 
-          return {
-            code: tx.booking_code,
-            date: createdAt.toLocaleDateString('id-ID'),
-            time: createdAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
-            dateTime: `${createdAt.toLocaleDateString('id-ID')} ${createdAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`,
-            created_at: tx.created_at,
-            category: categoryType,
-            type: tx.ticket_type === 'regular' || tx.ticket_type === 'reguler' ? 'Beli Tiket Masuk' :
-                  tx.ticket_type === 'rombongan' ? 'Beli Tiket Rombongan' :
-                  tx.ticket_type === 'kursus' ? 'Beli Tiket Kursus Renang' :
-                  (isRental ? `Sewa ${tx.ticket_type === 'ban' ? 'Ban' : tx.ticket_type === 'gazebo' ? 'Gazebo' : tx.ticket_type === 'angsa' ? 'Sepeda Air' : 'Layanan'}` : 'Beli Tiket'),
-            product: tx.ticket_type === 'ban' ? 'Sewa Ban' :
-                     tx.ticket_type === 'gazebo' ? 'Sewa Gazebo' :
-                     tx.ticket_type === 'angsa' ? 'Sewa Sepeda Air / Angsa' :
-                     tx.ticket_type === 'reguler' || tx.ticket_type === 'regular' ? 'Tiket Reguler' :
-                     tx.ticket_type === 'rombongan' ? 'Tiket Rombongan' :
-                     tx.ticket_type === 'kursus' ? 'Kursus Renang' : tx.ticket_type,
-            qty: tx.quantity,
-            total: tx.total_price,
-            channel: tx.channel === 'online' ? 'Online' : 'Offline',
-            method: tx.payment_method === 'tunai' ? 'Tunai' :
-                    tx.payment_method === 'qris' ? 'QRIS' : 'Transfer',
-            customer: tx.customer_name,
-            status: tx.status
-          };
-        });
-
-        // Gabungkan transaksi Supabase dengan cache lokal (agar tidak ada transaksi lokal sebelumnya yang hilang)
-        const saved = localStorage.getItem('waterboom_sales_history');
-        let combined = [...historyData];
-        if (saved) {
-          try {
-            const localItems = JSON.parse(saved);
-            const existingCodes = new Set(historyData.map(h => h.code));
-            localItems.forEach(item => {
-              if (item && item.code && !existingCodes.has(item.code)) {
-                combined.push(item);
-              }
+                return {
+                    code: tx.booking_code,
+                    date: createdAt.toLocaleDateString('id-ID'),
+                    time: createdAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+                    dateTime: `${createdAt.toLocaleDateString('id-ID')} ${createdAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`,
+                    created_at: tx.created_at,
+                    category: categoryType,
+                    type: tx.ticket_type === 'regular' || tx.ticket_type === 'reguler' ? 'Beli Tiket Masuk' :
+                        tx.ticket_type === 'rombongan' ? 'Beli Tiket Rombongan' :
+                            tx.ticket_type === 'kursus' ? 'Beli Tiket Kursus Renang' :
+                                (isRental ? `Sewa ${tx.ticket_type === 'ban' ? 'Ban' : tx.ticket_type === 'gazebo' ? 'Gazebo' : tx.ticket_type === 'angsa' ? 'Sepeda Air' : 'Layanan'}` : 'Beli Tiket'),
+                    product: tx.ticket_type === 'ban' ? 'Sewa Ban' :
+                        tx.ticket_type === 'gazebo' ? 'Sewa Gazebo' :
+                            tx.ticket_type === 'angsa' ? 'Sewa Sepeda Air / Angsa' :
+                                tx.ticket_type === 'reguler' || tx.ticket_type === 'regular' ? 'Tiket Reguler' :
+                                    tx.ticket_type === 'rombongan' ? 'Tiket Rombongan' :
+                                        tx.ticket_type === 'kursus' ? 'Kursus Renang' : tx.ticket_type,
+                    qty: tx.quantity,
+                    total: tx.total_price,
+                    channel: tx.channel === 'online' ? 'Online' : 'Offline',
+                    method: tx.payment_method === 'tunai' ? 'Tunai' :
+                        tx.payment_method === 'qris' ? 'QRIS' : 'Transfer',
+                    customer: tx.customer_name,
+                    status: tx.status
+                };
             });
-          } catch (e) {
-            console.warn('Error merging local history:', e);
-          }
-        }
 
-        setHistory(combined);
-        localStorage.setItem('waterboom_sales_history', JSON.stringify(combined));
-      } catch (err) {
-        console.error('Error:', err);
-        // Fallback ke localStorage
-        const saved = localStorage.getItem('waterboom_sales_history');
-        if (saved) setHistory(JSON.parse(saved));
-      } finally {
-        setLoading(false);
-      }
+            // Gabungkan transaksi Supabase dengan cache lokal (agar tidak ada transaksi lokal sebelumnya yang hilang)
+            const saved = localStorage.getItem('waterboom_sales_history');
+            let combined = [...historyData];
+            if (saved) {
+                try {
+                    const localItems = JSON.parse(saved);
+                    const existingCodes = new Set(historyData.map(h => h.code));
+                    localItems.forEach(item => {
+                        if (item && item.code && !existingCodes.has(item.code)) {
+                            combined.push(item);
+                        }
+                    });
+                } catch (e) {
+                    console.warn('Error merging local history:', e);
+                }
+            }
+
+            setHistory(combined);
+            localStorage.setItem('waterboom_sales_history', JSON.stringify(combined));
+        } catch (err) {
+            console.error('Error:', err);
+            // Fallback ke localStorage
+            const saved = localStorage.getItem('waterboom_sales_history');
+            if (saved) setHistory(JSON.parse(saved));
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Active Tab state
@@ -239,6 +240,32 @@ export default function AdminDashboard() {
     const [showNotifDropdown, setShowNotifDropdown] = useState(false);
     const [selectedPDFTicket, setSelectedPDFTicket] = useState(null);
     const [isPrinting, setIsPrinting] = useState(false);
+    const [adminPrintFormat, setAdminPrintFormat] = useState('full'); // 'full' | 'ticket' | 'invoice' | 'addon'
+
+    const triggerAdminPrint = (format) => {
+        if (isPrinting) return;
+        setIsPrinting(true);
+        setAdminPrintFormat(format);
+        const printClass = format === 'ticket' ? 'print-mode-ticket'
+            : format === 'invoice' ? 'print-mode-invoice'
+                : format === 'full' ? 'print-mode-full'
+                    : 'print-mode-rental';
+
+        document.body.classList.add(printClass, 'is-printing-receipt');
+
+        const cleanup = () => {
+            document.body.classList.remove('print-mode-ticket', 'print-mode-invoice', 'print-mode-full', 'print-mode-rental', 'print-mode-pdf-card', 'is-printing-receipt');
+            setIsPrinting(false);
+            window.removeEventListener('afterprint', cleanup);
+        };
+
+        window.addEventListener('afterprint', cleanup);
+
+        setTimeout(() => {
+            window.print();
+            setTimeout(cleanup, 30000);
+        }, 300);
+    };
 
     // Notifications state
     const [notifications, setNotifications] = useState([
@@ -388,7 +415,7 @@ export default function AdminDashboard() {
                     historyData = JSON.parse(savedHistory);
                     historyData = historyData.filter(item => item.code && !item.code.startsWith('TRX-250521-'));
                     localStorage.setItem('waterboom_sales_history', JSON.stringify(historyData));
-                } catch(e) {
+                } catch (e) {
                     historyData = [];
                 }
             } else {
@@ -418,7 +445,7 @@ export default function AdminDashboard() {
                     expensesData = JSON.parse(savedExpenses);
                     expensesData = expensesData.filter(e => e.id !== '1' && e.id !== '2' && e.id !== '3');
                     localStorage.setItem('waterboom_expenditures', JSON.stringify(expensesData));
-                } catch(e) {
+                } catch (e) {
                     expensesData = [];
                 }
             } else {
@@ -477,7 +504,7 @@ export default function AdminDashboard() {
                 transactions: historyData.length
             });
         };
-        
+
         loadAllData();
         fetchTransactions();
         // Refresh data setiap 30 detik
@@ -497,7 +524,7 @@ export default function AdminDashboard() {
             totalSales += Number(item.total) || 0;
             totalTransactions += 1;
         });
-        
+
         let totalOutflow = 0;
         dateFilteredExpenditures.forEach(e => totalOutflow += Number(e.amount) || 0);
 
@@ -794,7 +821,7 @@ export default function AdminDashboard() {
         };
         const unitPrice = unitPrices[newBooking.type] || 20000;
         const totalPrice = unitPrice * parseInt(newBooking.qty || 1);
-        
+
         const formattedDate = new Date(newBooking.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
         const isRental = newBooking.category === 'Sewa' || newBooking.type.includes('Sewa');
 
@@ -861,16 +888,16 @@ export default function AdminDashboard() {
         <div className="superadmin-dashboard-container">
             {/* Mobile Sidebar Backdrop Overlay */}
             {isMobileSidebarOpen && (
-                <div 
-                    className="mobile-sidebar-backdrop" 
-                    onClick={() => setIsMobileSidebarOpen(false)} 
+                <div
+                    className="mobile-sidebar-backdrop"
+                    onClick={() => setIsMobileSidebarOpen(false)}
                 />
             )}
 
             {/* Mobile Top Navigation Header */}
             <div className="mobile-admin-topbar">
-                <button 
-                    type="button" 
+                <button
+                    type="button"
                     className="mobile-admin-hamburger-btn"
                     onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
                     aria-label="Buka Navigasi Mobile"
@@ -939,7 +966,7 @@ export default function AdminDashboard() {
                         <span className="brand-name">{systemSettings.businessName}</span>
                         <span className="brand-loc">PORTAL UTAMA</span>
                     </div>
-                    <button 
+                    <button
                         type="button"
                         className="mobile-sidebar-close-btn"
                         onClick={() => setIsMobileSidebarOpen(false)}
@@ -948,7 +975,7 @@ export default function AdminDashboard() {
                         <i className="fa-solid fa-xmark"></i>
                     </button>
                 </div>
-                <div 
+                <div
                     className="sidebar-profile-card"
                     onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                     style={{
@@ -1460,7 +1487,7 @@ export default function AdminDashboard() {
                 <div className="superadmin-content-wrapper">
                     {/* KPI stats bar displayed globally across main pages */}
                     {(activeTab === 'dashboard' || activeTab === 'transaksi' || activeTab === 'pemasukan' || activeTab === 'pengeluaran') && (
-                        
+
                         <div className="superadmin-kpi-grid">
                             <div className="kpi-card-card blue">
                                 <div className="kpi-icon-square"><i className="fa-solid fa-ticket"></i></div>
@@ -1559,7 +1586,7 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
 
-                                 {/* Donut Chart: Pemasukan Berdasarkan Sumber */}
+                                {/* Donut Chart: Pemasukan Berdasarkan Sumber */}
                                 <div className="chart-card-box donut-chart-card">
                                     <h3>Pemasukan Berdasarkan Sumber</h3>
                                     <div className="donut-chart-flex">
@@ -2471,7 +2498,7 @@ export default function AdminDashboard() {
                             <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '20px' }}>
                                 Klasifikasi resmi master data antara item <strong>BELI (Tiket Masuk)</strong> dan <strong>SEWA (Fasilitas & Wahana)</strong>.
                             </p>
-                            
+
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                 {/* Kategori Beli */}
                                 <div style={{ backgroundColor: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: '16px', padding: '18px' }}>
@@ -2483,9 +2510,9 @@ export default function AdminDashboard() {
                                         </div>
                                     </div>
                                     <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.83rem', color: '#1e3a8a', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        <li>🎟️ <strong>Tiket Masuk Reguler</strong> (Rp 20.000)</li>
-                                        <li>🏫 <strong>Tiket Rombongan Sekolah</strong> (Rp 17.000)</li>
-                                        <li>🏊‍♂️ <strong>Kursus Renang Edukatif</strong> (Rp 15.000)</li>
+                                        <li> <strong>Tiket Masuk Reguler</strong> (Rp 20.000)</li>
+                                        <li> <strong>Tiket Rombongan Sekolah</strong> (Rp 17.000)</li>
+                                        <li> <strong>Kursus Renang Edukatif</strong> (Rp 15.000)</li>
                                     </ul>
                                 </div>
 
@@ -2741,107 +2768,184 @@ export default function AdminDashboard() {
             </main>
 
             {/* MODAL CETAK TIKET PDF RESMI FOR ADMIN */}
+            {/* MODAL CETAK TIKET, INVOICE & ADD-ON RESMI FOR ADMIN */}
             {selectedPDFTicket && (
                 <div className="v-modal-backdrop" onClick={() => setSelectedPDFTicket(null)}>
-                    <div className="v-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '540px', backgroundColor: 'white' }}>
-                        <div className="v-modal-head" style={{ backgroundColor: '#0c294a', color: 'white' }}>
-                            <h4 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <i className="fa-solid fa-file-pdf"></i> E-Tiket Resmi Waterboom (PDF)
-                            </h4>
-                            <button onClick={() => setSelectedPDFTicket(null)} style={{ color: 'white' }}>&times;</button>
-                        </div>
-                        <div className="v-modal-body" style={{ padding: '24px', backgroundColor: '#fff' }}>
-                            <div id="pdf-printable-area" style={{ border: '3px solid #0c294a', borderRadius: '18px', padding: '24px', backgroundColor: '#f8fafc' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0c294a', paddingBottom: '12px', marginBottom: '16px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <img src="assets/logo.png" alt="Logo" style={{ height: '42px' }} />
-                                        <div>
-                                            <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0c294a', margin: 0 }}>WATERBOOM CIJOHO INDAH</h3>
-                                            <small style={{ color: '#1a73e8', fontWeight: 700 }}>E-TICKET RESMI PENGUNJUNG</small>
-                                        </div>
-                                    </div>
-                                    <span style={{ backgroundColor: '#d1fae5', color: '#047857', fontSize: '0.72rem', fontWeight: 900, padding: '4px 10px', borderRadius: '50px', border: '1px solid #6ee7b7' }}>
-                                        VALIDATED / LUNAS
-                                    </span>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.85rem', marginBottom: '16px' }}>
-                                    <div>
-                                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>KODE BOOKING</span>
-                                        <strong style={{ fontSize: '1.1rem', color: '#1a73e8' }}>{selectedPDFTicket.code}</strong>
-                                    </div>
-                                    <div>
-                                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>TANGGAL & JAM BOOKING</span>
-                                        <strong>{selectedPDFTicket.date} • ⏰ {selectedPDFTicket.time || '09:00 WIB'}</strong>
-                                    </div>
-                                    <div>
-                                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>NAMA PEMESAN</span>
-                                        <strong>{selectedPDFTicket.name || 'Pengunjung'}</strong>
-                                    </div>
-                                    <div>
-                                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>NO. WHATSAPP</span>
-                                        <strong>{selectedPDFTicket.phone || '-'}</strong>
-                                    </div>
-                                </div>
-                                <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '10px', marginBottom: '16px' }}>
-                                    <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', marginBottom: '6px' }}>RINCIAN ITEM & TOTAL:</span>
-                                    {selectedPDFTicket.qty > 0 && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                                            <span>{selectedPDFTicket.type} ({selectedPDFTicket.qty || 1}x)</span>
-                                            <strong>Rp {(selectedPDFTicket.subtotal || (selectedPDFTicket.ticketPrice ? selectedPDFTicket.ticketPrice * selectedPDFTicket.qty : selectedPDFTicket.total))?.toLocaleString('id-ID')}</strong>
-                                        </div>
-                                    )}
-                                    {(selectedPDFTicket.rentals?.ban > 0 || selectedPDFTicket.details?.rentals?.ban > 0) && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#475569', marginBottom: '2px' }}>
-                                            <span>• Sewa Ban Renang ({(selectedPDFTicket.rentals?.ban || selectedPDFTicket.details?.rentals?.ban)}x)</span>
-                                            <span>Rp {((selectedPDFTicket.rentals?.ban || selectedPDFTicket.details?.rentals?.ban) * 5000).toLocaleString('id-ID')}</span>
-                                        </div>
-                                    )}
-                                    {(selectedPDFTicket.rentals?.sepeda > 0 || selectedPDFTicket.details?.rentals?.sepeda > 0) && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#475569', marginBottom: '2px' }}>
-                                            <span>• Sewa Sepeda Air ({(selectedPDFTicket.rentals?.sepeda || selectedPDFTicket.details?.rentals?.sepeda)}x)</span>
-                                            <span>Rp {((selectedPDFTicket.rentals?.sepeda || selectedPDFTicket.details?.rentals?.sepeda) * 20000).toLocaleString('id-ID')}</span>
-                                        </div>
-                                    )}
-                                    {(selectedPDFTicket.rentals?.gazebo > 0 || selectedPDFTicket.details?.rentals?.gazebo > 0) && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#475569', marginBottom: '2px' }}>
-                                            <span>• Sewa Gazebo Santai ({(selectedPDFTicket.rentals?.gazebo || selectedPDFTicket.details?.rentals?.gazebo)}x)</span>
-                                            <span>Rp {((selectedPDFTicket.rentals?.gazebo || selectedPDFTicket.details?.rentals?.gazebo) * 20000).toLocaleString('id-ID')}</span>
-                                        </div>
-                                    )}
-                                    <div style={{ borderTop: '1px solid #cbd5e1', paddingTop: '6px', marginTop: '6px', display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: 900, color: '#0c294a' }}>
-                                        <span>TOTAL BAYAR</span>
-                                        <span>Rp {selectedPDFTicket.total?.toLocaleString('id-ID')}</span>
-                                    </div>
-                                </div>
-                                <div style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '4.5rem', color: '#0c294a', lineHeight: 1 }}>
-                                        <i className="fa-solid fa-qrcode"></i>
-                                    </div>
-                                    <div style={{ letterSpacing: '3px', fontWeight: 900, color: '#475569', fontSize: '0.9rem', marginTop: '6px' }}>
-                                        {selectedPDFTicket.code}
-                                    </div>
-                                    <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Tunjukkan barcode/QR code ini ke loket pintu masuk</small>
-                                </div>
+                    <div className="v-modal-card fade-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px', backgroundColor: 'white', borderRadius: '20px' }}>
+                        <div className="v-modal-head modal-non-printable" style={{ backgroundColor: '#0c294a', color: 'white', borderRadius: '20px 20px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h4 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '1rem', fontWeight: 900 }}>
+                                    <i className="fa-solid fa-print" style={{ color: '#60a5fa' }}></i> Cetak Dokumen Transaksi Resmi
+                                </h4>
+                                <small style={{ color: '#93c5fd', fontSize: '0.72rem', display: 'block', marginTop: '2px' }}>
+                                    Pilih format struk untuk dicetak atau disimpan ke PDF
+                                </small>
                             </div>
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                            <button onClick={() => setSelectedPDFTicket(null)} style={{ color: 'white', background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer' }}>&times;</button>
+                        </div>
+                        <div className="v-modal-body" style={{ padding: '18px', backgroundColor: '#fff' }}>
+                            {/* 4 OPSI TAB STRUK UTAMA */}
+                            <div className="modal-non-printable" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', backgroundColor: '#f1f5f9', padding: '4px', borderRadius: '12px', marginBottom: '14px' }}>
                                 <button
-                                    disabled={isPrinting}
-                                    onClick={() => {
-                                        if (isPrinting) return;
-                                        setIsPrinting(true);
-                                        document.body.className = 'print-mode-pdf-card';
-                                        setTimeout(() => {
-                                            window.print();
-                                            setTimeout(() => {
-                                                document.body.className = '';
-                                                setIsPrinting(false);
-                                            }, 1000);
-                                        }, 120);
+                                    type="button"
+                                    onClick={() => setAdminPrintFormat('full')}
+                                    style={{
+                                        border: 'none',
+                                        padding: '8px 2px',
+                                        borderRadius: '8px',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 900,
+                                        backgroundColor: adminPrintFormat === 'full' ? '#2563eb' : 'transparent',
+                                        color: adminPrintFormat === 'full' ? '#ffffff' : '#475569',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '2px',
+                                        transition: 'all 0.2s ease',
+                                        boxShadow: adminPrintFormat === 'full' ? '0 2px 8px rgba(37, 99, 235, 0.3)' : 'none'
                                     }}
-                                    style={{ flex: 1, backgroundColor: isPrinting ? '#94a3b8' : '#1a73e8', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 800, cursor: isPrinting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                 >
-                                    <i className="fa-solid fa-print"></i> {isPrinting ? 'Mencetak...' : 'Cetak / Simpan Ke PDF'}
+                                    <i className="fa-solid fa-layer-group" style={{ fontSize: '0.9rem' }}></i>
+                                    <span>Semua Struk</span>
                                 </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setAdminPrintFormat('ticket')}
+                                    style={{
+                                        border: 'none',
+                                        padding: '8px 2px',
+                                        borderRadius: '8px',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 900,
+                                        backgroundColor: adminPrintFormat === 'ticket' ? '#047857' : 'transparent',
+                                        color: adminPrintFormat === 'ticket' ? '#ffffff' : '#475569',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '2px',
+                                        transition: 'all 0.2s ease',
+                                        boxShadow: adminPrintFormat === 'ticket' ? '0 2px 8px rgba(4, 120, 87, 0.3)' : 'none'
+                                    }}
+                                >
+                                    <i className="fa-solid fa-ticket" style={{ fontSize: '0.9rem' }}></i>
+                                    <span>Tiket Masuk</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setAdminPrintFormat('invoice')}
+                                    style={{
+                                        border: 'none',
+                                        padding: '8px 2px',
+                                        borderRadius: '8px',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 900,
+                                        backgroundColor: adminPrintFormat === 'invoice' ? '#0c294a' : 'transparent',
+                                        color: adminPrintFormat === 'invoice' ? '#ffffff' : '#475569',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '2px',
+                                        transition: 'all 0.2s ease',
+                                        boxShadow: adminPrintFormat === 'invoice' ? '0 2px 8px rgba(12, 41, 74, 0.3)' : 'none'
+                                    }}
+                                >
+                                    <i className="fa-solid fa-file-invoice-dollar" style={{ fontSize: '0.9rem' }}></i>
+                                    <span>Invoice</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setAdminPrintFormat('addon')}
+                                    style={{
+                                        border: 'none',
+                                        padding: '8px 2px',
+                                        borderRadius: '8px',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 900,
+                                        backgroundColor: adminPrintFormat === 'addon' ? '#b45309' : 'transparent',
+                                        color: adminPrintFormat === 'addon' ? '#ffffff' : '#475569',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '2px',
+                                        transition: 'all 0.2s ease',
+                                        boxShadow: adminPrintFormat === 'addon' ? '0 2px 8px rgba(180, 83, 9, 0.3)' : 'none'
+                                    }}
+                                >
+                                    <i className="fa-solid fa-life-ring" style={{ fontSize: '0.9rem' }}></i>
+                                    <span>Sewa Add-On</span>
+                                </button>
+                            </div>
+
+                            {/* PRATINJAU STRUK AKTIF */}
+                            <div className="receipt-print-wrapper admin-receipt-scroll" style={{ padding: '4px', marginBottom: '16px' }}>
+                                {adminPrintFormat === 'full' && (
+                                    <FullPackageReceipt data={selectedPDFTicket} />
+                                )}
+                                {adminPrintFormat === 'ticket' && (
+                                    <TicketReceipt data={selectedPDFTicket} standalone={true} forceShow={true} />
+                                )}
+                                {adminPrintFormat === 'invoice' && (
+                                    <InvoiceReceipt data={selectedPDFTicket} standalone={true} />
+                                )}
+                                {adminPrintFormat === 'addon' && (
+                                    <AddonReceipt data={selectedPDFTicket} standalone={true} forceShow={true} />
+                                )}
+                            </div>
+
+                            {/* TOMBOL CETAK STRUK LANGSUNG */}
+                            <div className="modal-non-printable" style={{ backgroundColor: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '12px', marginBottom: '14px' }}>
+                                <div style={{ fontSize: '0.76rem', fontWeight: 900, color: '#0c294a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <i className="fa-solid fa-print" style={{ color: '#2563eb' }}></i> PILIH CETAK LANGSUNG:
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
+                                    <button
+                                        type="button"
+                                        disabled={isPrinting}
+                                        onClick={() => triggerAdminPrint('ticket')}
+                                        style={{ backgroundColor: '#047857', color: 'white', border: 'none', padding: '10px 6px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 900, cursor: isPrinting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', boxShadow: '0 2px 6px rgba(4,120,87,0.2)' }}
+                                    >
+                                        <i className="fa-solid fa-ticket"></i> Cetak Tiket
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={isPrinting}
+                                        onClick={() => triggerAdminPrint('invoice')}
+                                        style={{ backgroundColor: '#0c294a', color: 'white', border: 'none', padding: '10px 6px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 900, cursor: isPrinting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', boxShadow: '0 2px 6px rgba(12,41,74,0.2)' }}
+                                    >
+                                        <i className="fa-solid fa-file-invoice-dollar"></i> Cetak Invoice
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={isPrinting}
+                                        onClick={() => triggerAdminPrint('addon')}
+                                        style={{ backgroundColor: '#b45309', color: 'white', border: 'none', padding: '10px 6px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 900, cursor: isPrinting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', boxShadow: '0 2px 6px rgba(180,83,9,0.2)' }}
+                                    >
+                                        <i className="fa-solid fa-life-ring"></i> Cetak Add-On
+                                    </button>
+                                </div>
+                                <button
+                                    type="button"
+                                    disabled={isPrinting}
+                                    onClick={() => triggerAdminPrint('full')}
+                                    style={{ width: '100%', backgroundColor: '#0c294a', color: 'white', border: 'none', padding: '11px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 900, cursor: isPrinting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                >
+                                    <i className="fa-solid fa-layer-group" style={{ color: '#60a5fa' }}></i> Cetak Semua Struk Sekaligus (Tiket + Invoice + Add-On)
+                                </button>
+                            </div>
+
+                            {/* WHATSAPP & ACTION BUTTONS */}
+                            <div className="modal-non-printable" style={{ display: 'flex', gap: '8px' }}>
                                 <button
                                     onClick={() => {
                                         let targetPhone = selectedPDFTicket.phone || selectedPDFTicket.buyerPhone || '';
@@ -2855,9 +2959,9 @@ export default function AdminDashboard() {
                                         const waText = `Halo kak *${selectedPDFTicket.name || 'Pengunjung'}*! 👋\nBerikut Tiket Resmi PDF Waterboom Cijoho Indah:\n\n📌 *Kode Booking:* ${selectedPDFTicket.code}\n📅 *Tanggal:* ${selectedPDFTicket.date}\n⏰ *Jam Booking:* ${selectedPDFTicket.time || '09:00 WIB'}\n🎟️ *Detail:* ${selectedPDFTicket.type} (${selectedPDFTicket.qty || 1}x)\n💰 *Total:* Rp ${selectedPDFTicket.total?.toLocaleString('id-ID')}\n\nE-Tiket PDF siap digunakan di pintu masuk. Terima kasih!`;
                                         window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(waText)}`, '_blank');
                                     }}
-                                    style={{ flex: 1, backgroundColor: '#25D366', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    style={{ flex: 1, backgroundColor: '#25D366', color: 'white', border: 'none', padding: '11px', borderRadius: '10px', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                                 >
-                                    <i className="fa-brands fa-whatsapp"></i> Kirim WA Ke Pemesan
+                                    <i className="fa-brands fa-whatsapp"></i> Kirim WA
                                 </button>
                                 <button
                                     onClick={() => {
@@ -2866,14 +2970,25 @@ export default function AdminDashboard() {
                                         setSwitchToast('Teks WA Berhasil Disalin!');
                                         setTimeout(() => setSwitchToast(''), 3000);
                                     }}
-                                    style={{ flex: 1, backgroundColor: '#0c294a', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    style={{ backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', padding: '11px 14px', borderRadius: '10px', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                                 >
-                                    <i className="fa-solid fa-copy"></i> Salin Teks WA
+                                    <i className="fa-solid fa-copy"></i> Salin
+                                </button>
+                                <button
+                                    onClick={() => setSelectedPDFTicket(null)}
+                                    style={{ backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', padding: '11px 16px', borderRadius: '10px', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}
+                                >
+                                    Tutup
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* DIRECT BODY PRINT PORTAL: BEBAS CLIPPING MODAL */}
+            {selectedPDFTicket && (
+                <DirectPrintPortal data={selectedPDFTicket} format={adminPrintFormat} />
             )}
 
             {/* MODAL NOTIFIKASI ADMIN (CENTERED OVERLAY FOR MOBILE & DESKTOP) */}

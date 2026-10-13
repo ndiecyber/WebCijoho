@@ -25,22 +25,22 @@ export default function WaveDivider({ type = 'accent', color, style = {}, classN
     if (type === 'footer') {
         return (
             <div className={`footer-top-wave-container ${className}`} style={style}>
-                <svg viewBox="0 0 1440 120" preserveAspectRatio="none" className="footer-top-wave-svg">
+                <svg viewBox="0 0 1440 90" preserveAspectRatio="none" className="footer-top-wave-svg">
                     {/* Layer 1: Translucent Blue Wave Accent */}
                     <path
-                        d="M0,0 L1440,0 L1440,55 C1300,95 1150,100 980,68 C810,36 670,88 500,72 C330,56 180,98 0,48 Z"
+                        d="M0,0 L0,44 C131,44 229,72 360,72 C491,72 589,42 720,42 C851,42 949,72 1080,72 C1211,72 1309,44 1440,44 L1440,0 Z"
                         fill="rgba(56, 189, 248, 0.45)"
-                    ></path>
-                    {/* Layer 2: Translucent White Wave Accent */}
+                    />
+                    {/* Layer 2: Translucent White Wave Froth Accent */}
                     <path
-                        d="M0,0 L1440,0 L1440,38 C1260,78 1100,85 940,48 C780,12 620,72 450,52 C280,32 140,78 0,32 Z"
+                        d="M0,0 L0,32 C131,32 229,60 360,60 C491,60 589,30 720,30 C851,30 949,60 1080,60 C1211,60 1309,32 1440,32 L1440,0 Z"
                         fill="rgba(255, 255, 255, 0.6)"
-                    ></path>
-                    {/* Layer 3: Solid Body Background Cutout */}
+                    />
+                    {/* Layer 3: Solid White Background Cutout */}
                     <path
-                        d="M0,0 L1440,0 L1440,25 C1280,65 1120,78 960,42 C800,8 640,58 480,38 C320,18 160,62 0,18 Z"
+                        d="M0,0 L0,20 C131,20 229,48 360,48 C491,48 589,18 720,18 C851,18 949,48 1080,48 C1211,48 1309,20 1440,20 L1440,0 Z"
                         fill={color || "#ffffff"}
-                    ></path>
+                    />
                 </svg>
             </div>
         );
