@@ -170,7 +170,16 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
                 };
             });
 
-            const { data, error } = await supabase.from('transactions').insert(rows);
+            let { data, error } = await supabase.from('transactions').insert(rows);
+            // Fallback jika kolom transaction_type belum dibuat di database Supabase
+            if (error && error.message && error.message.includes('transaction_type')) {
+                console.warn('Kolom transaction_type belum ada di Supabase, menyimpan tanpa transaction_type:', error.message);
+                const fallbackRows = rows.map(({ transaction_type, ...rest }) => rest);
+                const retry = await supabase.from('transactions').insert(fallbackRows);
+                data = retry.data;
+                error = retry.error;
+            }
+
             if (error) {
                 console.error('Gagal menyimpan ke Supabase:', error);
                 alert(`Gagal Menyimpan Transaksi: ${error.message}`);

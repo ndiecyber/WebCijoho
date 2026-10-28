@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     id BIGSERIAL PRIMARY KEY,
     booking_code VARCHAR(100) NOT NULL,
     ticket_type VARCHAR(100),
+    transaction_type VARCHAR(50) DEFAULT 'beli',
     quantity INTEGER DEFAULT 1,
     total_price NUMERIC DEFAULT 0,
     customer_name VARCHAR(255) DEFAULT 'Pengunjung',
@@ -45,6 +46,10 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     cashier_name VARCHAR(255) DEFAULT 'Petugas Kasir',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migrasi jika tabel sudah ada sebelumnya namun belum punya kolom transaction_type
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS transaction_type VARCHAR(50) DEFAULT 'beli';
+
 
 -- Index performa query
 CREATE INDEX IF NOT EXISTS idx_transactions_booking_code ON public.transactions(booking_code);
