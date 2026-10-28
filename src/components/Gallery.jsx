@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import WaveDivider from './WaveDivider';
 
 export default function Gallery() {
     const folderPath = '/assets/drive-download-20260728T150001Z-1-001/';
@@ -43,7 +44,10 @@ export default function Gallery() {
     ];
 
     return (
-        <section id="gallery" className="gallery-section">
+        <section id="gallery" className="gallery-section" style={{ paddingTop: '0px', position: 'relative', overflow: 'hidden' }}>
+            {/* Top Cheerful Tropical Cloud Canopy */}
+            <WaveDivider type="gallery-cloud" />
+
             <div className="container">
                 
                 {/* Header Layout */}
@@ -78,7 +82,7 @@ export default function Gallery() {
                 </div>
 
                 {/* Bottom Water Splash Divider */}
-                <div className="gallery-divider-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '60px' }}>
+                <div className="gallery-divider-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '20px', marginBottom: '4px' }}>
                     <div style={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ height: '1.5px', backgroundColor: '#1a73e8', flexGrow: 1, opacity: 0.3 }}></div>
                         <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#1a73e8', opacity: 0.6 }}></div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase'; // pastikan path sesuai (komponen ada di components/)
+import { TicketReceipt, InvoiceReceipt, AddonReceipt, FullPackageReceipt, DirectPrintPortal } from './TicketPrintReceipts';
 
 export default function MobileAppView({ onOpenBooking, isCashierMode = false }) {
     const [activeTab, setActiveTab] = useState('beranda');
@@ -81,14 +82,21 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
         setIsPrinting(true);
         setPrintFormat(formatMode);
         const printClass = formatMode === 'card' ? 'print-mode-pdf-card' : `print-mode-${formatMode}`;
-        document.body.className = printClass;
+        
+        document.body.classList.add(printClass, 'is-printing-receipt');
+
+        const cleanup = () => {
+            document.body.classList.remove('print-mode-ticket', 'print-mode-invoice', 'print-mode-full', 'print-mode-rental', 'print-mode-pdf-card', 'is-printing-receipt');
+            setIsPrinting(false);
+            window.removeEventListener('afterprint', cleanup);
+        };
+
+        window.addEventListener('afterprint', cleanup);
+
         setTimeout(() => {
             window.print();
-            setTimeout(() => {
-                document.body.className = '';
-                setIsPrinting(false);
-            }, 1000);
-        }, 120);
+            setTimeout(cleanup, 30000);
+        }, 300);
     };
 
     // --- State Laporan & Analytic Kasir (Mojo POS Style) ---
@@ -185,9 +193,9 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
         }
     };
 
-    // --- OFFICE POS: handleConfirmOfflinePOS (MODIFIED) ---
+    // --- OFFICE POS: handleConfirmOfflinePOS (DIRECT CHECKOUT TANPA FORM INTERMEDIATE) ---
     const handleConfirmOfflinePOS = async (e) => {
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
         const receiptCode = 'STR-' + Math.floor(100000 + Math.random() * 900000);
         const ticketTypeName = selectedTicket === 'reguler' ? 'Tiket Reguler' : selectedTicket === 'rombongan' ? 'Tiket Rombongan' : 'Kursus Renang';
         const hasTickets = ticketQty > 0;
@@ -202,8 +210,8 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
             typeName = 'Sewa Layanan / Add-on';
         }
 
-        const paidAmount = paymentMethod === 'cash' ? (parseInt(cashReceived) || grandTotal) : grandTotal;
-        const change = paidAmount - grandTotal;
+        const paidAmount = grandTotal;
+        const change = 0;
 
         // Siapkan items untuk Supabase
         const items = [];
@@ -218,36 +226,40 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
             items.push({
                 ticket_type: 'ban',
                 quantity: sewaBan,
-                total_price: sewaBan * (PRICES.rentals?.ban || 10000)
+                total_price: sewaBan * (PRICES.rentals?.ban || 5000)
             });
         }
         if (sewaSepeda > 0) {
             items.push({
                 ticket_type: 'angsa',
                 quantity: sewaSepeda,
-                total_price: sewaSepeda * (PRICES.rentals?.sepeda || 25000)
+                total_price: sewaSepeda * (PRICES.rentals?.sepeda || 5000)
             });
         }
         if (sewaGazebo > 0) {
             items.push({
                 ticket_type: 'gazebo',
                 quantity: sewaGazebo,
-                total_price: sewaGazebo * (PRICES.rentals?.gazebo || 30000)
+                total_price: sewaGazebo * (PRICES.rentals?.gazebo || 20000)
             });
         }
 
         const paymentMethodStr = paymentMethod === 'cash' ? 'tunai' : 'qris';
 
         // Simpan ke Supabase
-        await saveTransactionToSupabase(
-            receiptCode,
-            items,
-            paymentMethodStr,
-            'Petugas Kasir 1',
-            'Pengunjung Offline',
-            'lunas',
-            'offline'
-        );
+        try {
+            await saveTransactionToSupabase(
+                receiptCode,
+                items,
+                paymentMethodStr,
+                'Petugas Kasir 1',
+                buyerName?.trim() || 'Pengunjung Offline',
+                'lunas',
+                'offline'
+            );
+        } catch (err) {
+            console.error('Error saving to supabase:', err);
+        }
 
         // Simpan juga ke localStorage untuk history lokal
         const newReceipt = {
@@ -255,12 +267,18 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
             date: visitDate,
             time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
             cashierName: 'Petugas Kasir 1',
+            buyerName: buyerName?.trim() || 'Pengunjung Offline',
+            name: buyerName?.trim() || 'Pengunjung Offline',
+            phone: buyerPhone?.trim() || '-',
             category: hasTickets ? 'Beli' : 'Sewa',
             type: typeName,
+            hasTickets: hasTickets,
+            ticketQty: hasTickets ? ticketQty : 0,
             qty: hasTickets ? ticketQty : (sewaBan + sewaSepeda + sewaGazebo),
             ticketPrice: ticketPrice,
             subtotal: subtotal,
             rentals: { ban: sewaBan, sepeda: sewaSepeda, gazebo: sewaGazebo },
+            rentalsPrice: { ban: PRICES.rentals?.ban || 5000, sepeda: PRICES.rentals?.sepeda || 5000, gazebo: PRICES.rentals?.gazebo || 20000 },
             total: grandTotal,
             paymentMethod: paymentMethodStr === 'tunai' ? 'Tunai (Cash)' : 'QRIS / EDC',
             method: paymentMethodStr === 'tunai' ? 'Tunai' : 'QRIS',
@@ -275,10 +293,16 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
         setHistoryList(updatedHistory);
         localStorage.setItem('waterboom_sales_history', JSON.stringify(updatedHistory));
         window.dispatchEvent(new Event('storage'));
+        
         setOfflineReceiptData(newReceipt);
+        setPdfTicketData(newReceipt);
+        
+        // Pilihan format default: SEMUA STRUK agar Tiket, Invoice, & Add-on langsung lengkap
+        setPrintFormat('full');
 
         setShowOfflinePOSModal(false);
-        setShowOfflineReceiptModal(true);
+        setShowOfflineReceiptModal(false);
+        setShowPDFTicketModal(true); // LANGSUNG MUNCUL PILIHAN 3 CETAK STRUK
     };
 
     // --- WHATSAPP ONLINE ORDER (MODIFIED) ---
@@ -359,6 +383,8 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
             phone: buyerPhone,
             category: hasTickets ? 'Beli' : 'Sewa',
             type: typeName,
+            hasTickets: hasTickets,
+            ticketQty: hasTickets ? ticketQty : 0,
             ticketTypeKey: selectedTicket,
             qty: hasTickets ? ticketQty : (sewaBan + sewaSepeda + sewaGazebo),
             ticketPrice: ticketPrice,
@@ -399,6 +425,7 @@ export default function MobileAppView({ onOpenBooking, isCashierMode = false }) 
 
         // Jika Kasir Mode: LANGSUNG CETAK / UNDUH TIKET PDF (TANPA KIRIM WA)
         if (isCashierMode) {
+            setPrintFormat('full');
             setShowPDFTicketModal(true);
         } else {
             // Flow Pengunjung (Buka WhatsApp ke Admin)
@@ -601,7 +628,7 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
     });
 
     // Trigger Payment / Checkout Modal (Offline vs Online)
-    const handlePaymentClick = () => {
+    const handlePaymentClick = async () => {
         const hasTickets = ticketQty > 0;
         const hasRentals = (sewaBan > 0 || sewaSepeda > 0 || sewaGazebo > 0);
 
@@ -611,9 +638,8 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
         }
 
         if (posMode === 'offline') {
-            setCashReceived(grandTotal.toString());
-            setCashChange(0);
-            setShowOfflinePOSModal(true);
+            // LANGSUNG SELESAIKAN TRANSAKSI & LANGSUNG MUNCULKAN 3 PILIHAN CETAK STRUK TANPA FORM PERANTARA
+            await handleConfirmOfflinePOS();
         } else {
             setShowWACheckoutModal(true);
         }
@@ -1094,6 +1120,36 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                                         Chat WA Admin untuk E-Tiket PDF
                                     </button>
 
+                                    {/* Direct Print 3 Receipts Button in Tiket Saya Card */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPdfTicketData(activeTicketData);
+                                            setShowPDFTicketModal(true);
+                                        }}
+                                        style={{
+                                            margin: '0 0 14px 0',
+                                            width: '100%',
+                                            backgroundColor: '#0c294a',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '12px 16px',
+                                            borderRadius: '12px',
+                                            fontSize: '0.88rem',
+                                            fontWeight: 800,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            boxShadow: '0 4px 12px rgba(12, 41, 74, 0.25)',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        <i className="fa-solid fa-print" style={{ color: '#60a5fa', fontSize: '1.1rem' }}></i>
+                                        Cetak Struk (Tiket / Invoice / Add-On)
+                                    </button>
+
                                     <div className="ticket-barcode-container">
                                         <div className="mock-barcode">
                                             <span></span><span></span><span></span><span></span>
@@ -1423,6 +1479,7 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
+                                                                    setPrintFormat('full');
                                                                     setPdfTicketData(item.details || item);
                                                                     setShowPDFTicketModal(true);
                                                                 }}
@@ -1462,6 +1519,19 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                                                 <div className="history-card-details" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px dashed #e2e8f0' }}>
                                                     <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>Pemesanan: {item.name || item.buyerName || 'Pengunjung'}</span>
                                                     <strong style={{ fontSize: '0.95rem', color: '#2563eb', fontWeight: 900 }}>Rp {item.total?.toLocaleString('id-ID')}</strong>
+                                                </div>
+                                                <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setPrintFormat('full');
+                                                            setPdfTicketData(item.details || item);
+                                                            setShowPDFTicketModal(true);
+                                                        }}
+                                                        style={{ width: '100%', backgroundColor: '#0c294a', color: 'white', border: 'none', padding: '9px 12px', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(12, 41, 74, 0.15)' }}
+                                                    >
+                                                        <i className="fa-solid fa-print" style={{ color: '#60a5fa' }}></i> Cetak Struk (3 Opsi)
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))
@@ -1762,331 +1832,15 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                 </div>
             )}
 
-            {/* MODAL LOKET KASIR OFFLINE */}
-            {showOfflinePOSModal && (
-                <div className="v-modal-backdrop" onClick={() => setShowOfflinePOSModal(false)}>
-                    <div className="v-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px', backgroundColor: 'white' }}>
-                        <div className="v-modal-head" style={{ backgroundColor: '#0c294a', color: 'white' }}>
-                            <h4 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <i className="fa-solid fa-store"></i> Pembayaran Loket Offline
-                            </h4>
-                            <button onClick={() => setShowOfflinePOSModal(false)} style={{ color: 'white' }}>&times;</button>
-                        </div>
+            {/* MODAL LOKET KASIR OFFLINE TELAH DIHAPUS - TRANSAKSI LANGSUNG BUKA PILIHAN CETAK STRUK */}
 
-                        <form onSubmit={handleConfirmOfflinePOS} className="v-modal-body" style={{ padding: '20px' }}>
-                            <p style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '14px' }}>
-                                Transaksi offline langsung di tempat. Tiket & Struk fisik dapat dicetak dan/atau dikirim via WA ke pembeli.
-                            </p>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
-                                <div className="input-group-field">
-                                    <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0c294a' }}>Nama Pembeli</label>
-                                    <input
-                                        type="text"
-                                        value={buyerName}
-                                        onChange={(e) => setBuyerName(e.target.value)}
-                                        placeholder="Nama Pelanggan"
-                                        className="v-input"
-                                        style={{ fontSize: '0.82rem', padding: '8px 10px' }}
-                                    />
-                                </div>
-                                <div className="input-group-field">
-                                    <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0c294a' }}>No. WA Pembeli</label>
-                                    <input
-                                        type="text"
-                                        value={buyerPhone}
-                                        onChange={(e) => setBuyerPhone(e.target.value)}
-                                        placeholder="0812xxx (Opsional)"
-                                        className="v-input"
-                                        style={{ fontSize: '0.82rem', padding: '8px 10px' }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Payment Method Selector */}
-                            <div style={{ marginBottom: '16px' }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0c294a', display: 'block', marginBottom: '8px' }}>Metode Pembayaran</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPaymentMethod('cash')}
-                                        style={{
-                                            padding: '10px',
-                                            borderRadius: '8px',
-                                            border: paymentMethod === 'cash' ? '2px solid #0c294a' : '1px solid #cbd5e1',
-                                            backgroundColor: paymentMethod === 'cash' ? '#eff6ff' : 'white',
-                                            color: paymentMethod === 'cash' ? '#0c294a' : '#64748b',
-                                            fontWeight: 800,
-                                            fontSize: '0.85rem',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        <i className="fa-solid fa-money-bill-wave"></i> Tunai (Cash)
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPaymentMethod('qris')}
-                                        style={{
-                                            padding: '10px',
-                                            borderRadius: '8px',
-                                            border: paymentMethod === 'qris' ? '2px solid #0c294a' : '1px solid #cbd5e1',
-                                            backgroundColor: paymentMethod === 'qris' ? '#eff6ff' : 'white',
-                                            color: paymentMethod === 'qris' ? '#0c294a' : '#64748b',
-                                            fontWeight: 800,
-                                            fontSize: '0.85rem',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        <i className="fa-solid fa-qrcode"></i> QRIS / EDC
-                                    </button>
-                                </div>
-                            </div>
-
-                            {paymentMethod === 'cash' && (
-                                <div className="input-group-field" style={{ marginBottom: '14px' }}>
-                                    <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0c294a', display: 'block', marginBottom: '6px' }}>Jumlah Uang Tunai Diterima (Rp)</label>
-
-                                    {/* Quick Nominal Chips (Mojo POS Style) */}
-                                    <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setCashReceived(grandTotal.toString())}
-                                            style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '6px 10px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 900, cursor: 'pointer', color: '#1d4ed8' }}
-                                        >
-                                            ⚡ Uang Pas (Rp {grandTotal.toLocaleString('id-ID')})
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setCashReceived('50000')}
-                                            style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '6px 10px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', color: '#0c294a' }}
-                                        >
-                                            Rp 50.000
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setCashReceived('100000')}
-                                            style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '6px 10px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', color: '#0c294a' }}
-                                        >
-                                            Rp 100.000
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setCashReceived('200000')}
-                                            style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '6px 10px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', color: '#0c294a' }}
-                                        >
-                                            Rp 200.000
-                                        </button>
-                                    </div>
-
-                                    <input
-                                        type="number"
-                                        value={cashReceived}
-                                        onChange={(e) => setCashReceived(e.target.value)}
-                                        placeholder={`Minimal Rp ${grandTotal.toLocaleString('id-ID')}`}
-                                        className="v-input"
-                                        required
-                                    />
-                                    {parseInt(cashReceived) >= grandTotal && (
-                                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#047857', marginTop: '6px', backgroundColor: '#d1fae5', padding: '6px 10px', borderRadius: '6px' }}>
-                                            Kembalian: Rp {(parseInt(cashReceived) - grandTotal).toLocaleString('id-ID')}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Order Summary */}
-                            <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
-                                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '6px' }}>RINCIAN TRANSAKSI OFFLINE:</div>
-                                <div style={{ fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', color: '#0c294a' }}>
-                                    <span>{ticketQty}x {selectedTicket === 'reguler' ? 'Tiket Reguler' : selectedTicket === 'rombongan' ? 'Tiket Rombongan' : 'Kursus Renang'}</span>
-                                    <strong>Rp {subtotal.toLocaleString('id-ID')}</strong>
-                                </div>
-                                {sewaBan > 0 && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>• {sewaBan}x Sewa Ban</div>}
-                                {sewaSepeda > 0 && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>• {sewaSepeda}x Sewa Sepeda Air</div>}
-                                {sewaGazebo > 0 && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>• {sewaGazebo}x Sewa Gazebo</div>}
-
-                                <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '8px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>TOTAL</span>
-                                    <strong style={{ fontSize: '1.2rem', color: '#0c294a', fontWeight: 900 }}>Rp {grandTotal.toLocaleString('id-ID')}</strong>
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                className="btn w-full btn-pill"
-                                style={{ backgroundColor: '#0c294a', color: 'white', fontWeight: 800, padding: '14px', fontSize: '0.92rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                            >
-                                <i className="fa-solid fa-print"></i> BAYAR & CETAK STRUK TIKET FISIK
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL TAMPILAN STRUK & TIKET FISIK (OFFLINE) */}
-            {showOfflineReceiptModal && offlineReceiptData && (
-                <div className="v-modal-backdrop" onClick={() => setShowOfflineReceiptModal(false)}>
-                    <div className="v-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '460px', backgroundColor: 'white', borderRadius: '24px' }}>
-                        <div className="v-modal-head" style={{ backgroundColor: '#0c294a', color: 'white', borderRadius: '24px 24px 0 0' }}>
-                            <h4 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '1rem', fontWeight: 900 }}>
-                                <i className="fa-solid fa-receipt"></i> Struk Tiket Official Loket
-                            </h4>
-                            <button onClick={() => setShowOfflineReceiptModal(false)} style={{ color: 'white', background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer' }}>&times;</button>
-                        </div>
-
-                        <div className="v-modal-body" style={{ padding: '20px' }}>
-                            <div id="thermal-receipt-printable" style={{ border: '2px solid #000', borderRadius: '12px', padding: '16px', backgroundColor: '#fff', fontFamily: "'Courier New', Courier, monospace", color: '#000', fontSize: '0.82rem', lineHeight: '1.4' }}>
-                                {/* HEADER BRAND & LOGO */}
-                                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 900, margin: 0, letterSpacing: '-0.5px' }}>Cijoho Indah Waterboom</h2>
-                                    <small style={{ fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', display: 'block' }}>SERUNYA LIBURAN KELUARGA!</small>
-                                </div>
-
-                                <div style={{ borderTop: '2px solid #000', borderBottom: '2px solid #000', padding: '6px 0', margin: '8px 0', textAlign: 'center' }}>
-                                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900 }}>💦 STRUK TIKET 💦</h3>
-                                    <div style={{ fontSize: '0.78rem', fontWeight: 700, marginTop: '2px' }}>Cijoho Indah Waterboom</div>
-                                    <div style={{ fontSize: '0.72rem', color: '#333' }}>Jl. Raya Cijoho No. 88, Cijoho - Tasikmalaya 46134</div>
-                                    <div style={{ fontSize: '0.72rem', color: '#333' }}>Telp. 0265-1234567</div>
-                                </div>
-
-                                {/* METADATA INFO */}
-                                <div style={{ margin: '10px 0', fontSize: '0.8rem' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '100px 10px 1fr' }}>
-                                        <span>No. Transaksi</span><span>:</span><strong>{offlineReceiptData.code}</strong>
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '100px 10px 1fr' }}>
-                                        <span>Tanggal</span><span>:</span><span>{offlineReceiptData.date}</span>
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '100px 10px 1fr' }}>
-                                        <span>Waktu</span><span>:</span><span>{offlineReceiptData.time || '10:15:32'}</span>
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '100px 10px 1fr' }}>
-                                        <span>Kasir</span><span>:</span><span>{offlineReceiptData.cashierName || 'KASIR01'}</span>
-                                    </div>
-                                </div>
-
-                                {/* DETAIL PEMBELIAN TABLE */}
-                                <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '8px 0', margin: '10px 0' }}>
-                                    <div style={{ fontWeight: 900, marginBottom: '6px', fontSize: '0.82rem' }}>DETAIL PEMBELIAN</div>
-                                    <table style={{ width: '100%', fontSize: '0.76rem', borderCollapse: 'collapse' }}>
-                                        <thead>
-                                            <tr style={{ borderBottom: '1px solid #000', textAlign: 'left' }}>
-                                                <th style={{ paddingBottom: '4px', width: '25px' }}>No.</th>
-                                                <th style={{ paddingBottom: '4px' }}>Jenis Tiket / Service</th>
-                                                <th style={{ paddingBottom: '4px', textAlign: 'center', width: '35px' }}>Qty</th>
-                                                <th style={{ paddingBottom: '4px', textAlign: 'right' }}>Harga Satuan</th>
-                                                <th style={{ paddingBottom: '4px', textAlign: 'right' }}>Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {offlineReceiptData.qty > 0 && (
-                                                <tr>
-                                                    <td style={{ paddingTop: '6px', verticalAlign: 'top' }}>1.</td>
-                                                    <td style={{ paddingTop: '6px', verticalAlign: 'top' }}>{offlineReceiptData.type}</td>
-                                                    <td style={{ paddingTop: '6px', textAlign: 'center', verticalAlign: 'top' }}>{offlineReceiptData.qty}</td>
-                                                    <td style={{ paddingTop: '6px', textAlign: 'right', verticalAlign: 'top' }}>Rp {((offlineReceiptData.subtotal || offlineReceiptData.total) / offlineReceiptData.qty).toLocaleString('id-ID')}</td>
-                                                    <td style={{ paddingTop: '6px', textAlign: 'right', verticalAlign: 'top', fontWeight: 800 }}>Rp {offlineReceiptData.subtotal?.toLocaleString('id-ID')}</td>
-                                                </tr>
-                                            )}
-                                            {offlineReceiptData.rentals?.ban > 0 && (
-                                                <tr>
-                                                    <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>{offlineReceiptData.qty > 0 ? 2 : 1}.</td>
-                                                    <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>Sewa Ban Renang</td>
-                                                    <td style={{ paddingTop: '4px', textAlign: 'center', verticalAlign: 'top' }}>{offlineReceiptData.rentals.ban}</td>
-                                                    <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top' }}>Rp {(offlineReceiptData.rentalsPrice?.ban || 5000).toLocaleString('id-ID')}</td>
-                                                    <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top', fontWeight: 800 }}>Rp {(offlineReceiptData.rentals.ban * (offlineReceiptData.rentalsPrice?.ban || 5000)).toLocaleString('id-ID')}</td>
-                                                </tr>
-                                            )}
-                                            {offlineReceiptData.rentals?.sepeda > 0 && (
-                                                <tr>
-                                                    <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>{(offlineReceiptData.qty > 0 ? 1 : 0) + (offlineReceiptData.rentals?.ban > 0 ? 1 : 0) + 1}.</td>
-                                                    <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>Sewa Sepeda Air</td>
-                                                    <td style={{ paddingTop: '4px', textAlign: 'center', verticalAlign: 'top' }}>{offlineReceiptData.rentals.sepeda}</td>
-                                                    <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top' }}>Rp {(offlineReceiptData.rentalsPrice?.sepeda || 15000).toLocaleString('id-ID')}</td>
-                                                    <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top', fontWeight: 800 }}>Rp {(offlineReceiptData.rentals.sepeda * (offlineReceiptData.rentalsPrice?.sepeda || 15000)).toLocaleString('id-ID')}</td>
-                                                </tr>
-                                            )}
-                                            {offlineReceiptData.rentals?.gazebo > 0 && (
-                                                <tr>
-                                                    <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>{(offlineReceiptData.qty > 0 ? 1 : 0) + (offlineReceiptData.rentals?.ban > 0 ? 1 : 0) + (offlineReceiptData.rentals?.sepeda > 0 ? 1 : 0) + 1}.</td>
-                                                    <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>Sewa Gazebo Santai</td>
-                                                    <td style={{ paddingTop: '4px', textAlign: 'center', verticalAlign: 'top' }}>{offlineReceiptData.rentals.gazebo}</td>
-                                                    <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top' }}>Rp {(offlineReceiptData.rentalsPrice?.gazebo || 25000).toLocaleString('id-ID')}</td>
-                                                    <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top', fontWeight: 800 }}>Rp {(offlineReceiptData.rentals.gazebo * (offlineReceiptData.rentalsPrice?.gazebo || 25000)).toLocaleString('id-ID')}</td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* TOTALS */}
-                                <div style={{ borderBottom: '1px dashed #000', paddingBottom: '8px', marginBottom: '10px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                                        <span>Subtotal</span>
-                                        <span>: Rp {offlineReceiptData.total?.toLocaleString('id-ID')}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                                        <span>Biaya Layanan</span>
-                                        <span>: Rp 0</span>
-                                    </div>
-                                    <div style={{ borderTop: '1px solid #000', paddingTop: '4px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '0.92rem' }}>
-                                        <span>TOTAL BAYAR</span>
-                                        <span>: Rp {offlineReceiptData.total?.toLocaleString('id-ID')}</span>
-                                    </div>
-                                    {offlineReceiptData.paidAmount > 0 && (
-                                        <>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '0.78rem' }}>
-                                                <span>Bayar (Cash / QRIS)</span>
-                                                <span>: Rp {offlineReceiptData.paidAmount?.toLocaleString('id-ID')}</span>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                                                <span>Kembalian</span>
-                                                <span>: Rp {offlineReceiptData.change?.toLocaleString('id-ID')}</span>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-
-                                {/* FOOTER & KETENTUAN */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', fontSize: '0.7rem', alignItems: 'center', marginBottom: '10px' }}>
-                                    <div>
-                                        <strong style={{ fontSize: '0.78rem', display: 'block', marginBottom: '2px' }}>👥 TERIMA KASIH</strong>
-                                        <div>Selamat menikmati wahana Cijoho Indah Waterboom</div>
-                                    </div>
-                                    <div style={{ border: '1px solid #000', borderRadius: '6px', padding: '6px', fontSize: '0.64rem', lineHeight: '1.2' }}>
-                                        <strong style={{ display: 'block', textAlign: 'center', borderBottom: '1px solid #000', paddingBottom: '2px', marginBottom: '4px' }}>KETENTUAN</strong>
-                                        <ul style={{ margin: 0, paddingLeft: '12px' }}>
-                                            <li>Tiket tidak dapat dikembalikan.</li>
-                                            <li>Simpan struk di area kolam.</li>
-                                            <li>Berlaku 1x masuk.</li>
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <div style={{ borderTop: '1px dashed #000', paddingTop: '6px', textAlign: 'center', fontSize: '0.72rem' }}>
-                                    <div style={{ marginBottom: '4px' }}>Follow us : <strong>@cijohoindahwaterboom</strong></div>
-                                    <strong style={{ fontSize: '0.76rem', textTransform: 'uppercase' }}>🌊 TERIMA KASIH ATAS KUNJUNGAN ANDA 🌊</strong>
-                                </div>
-                            </div>
-
-                            <div style={{ marginTop: '16px' }}>
-                                <button
-                                    onClick={() => window.print()}
-                                    style={{ width: '100%', backgroundColor: '#0c294a', color: 'white', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(12, 41, 74, 0.2)' }}
-                                >
-                                    <i className="fa-solid fa-print"></i> Cetak Struk Tiket Fisik
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* MODAL CETAK TERPADU: INVOICE, TIKET MASUK, & KUPON SEWA ADD-ON */}
             {showPDFTicketModal && pdfTicketData && (
                 <div className="v-modal-backdrop" onClick={() => setShowPDFTicketModal(false)}>
                     <div className="v-modal-card fade-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px', backgroundColor: 'white', borderRadius: '24px' }}>
-                        <div className="v-modal-head" style={{ backgroundColor: '#0c294a', color: 'white', borderRadius: '24px 24px 0 0' }}>
+                        <div className="v-modal-head modal-non-printable" style={{ backgroundColor: '#0c294a', color: 'white', borderRadius: '24px 24px 0 0' }}>
                             <h4 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '1rem', fontWeight: 900 }}>
                                 <i className="fa-solid fa-print" style={{ color: '#60a5fa' }}></i> Cetak Dokumen Transaksi Resmi
                             </h4>
@@ -2094,596 +1848,198 @@ Mohon diproses konfirmasinya dan dikirimkan *Tiket Resmi PDF* ke nomor WhatsApp 
                         </div>
 
                         <div className="v-modal-body" style={{ padding: '20px' }}>
-                            {/* 80mm THERMAL PRINTER BADGE INDICATOR */}
-                            <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '8px 12px', borderRadius: '10px', fontSize: '0.76rem', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span><i className="fa-solid fa-print"></i> UKURAN PRINTER: <strong>THERMAL 80 MM (POS STANDARD)</strong></span>
-                                <span style={{ backgroundColor: '#2563eb', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.68rem', fontWeight: 900 }}>80mm POS Roll</span>
+                            {/* Transaksi Info Banner */}
+                            <div className="modal-non-printable" style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', padding: '10px 14px', borderRadius: '12px', fontSize: '0.82rem', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div>
+                                    <span style={{ color: '#166534', fontWeight: 900, display: 'block' }}>✓ Transaksi Berhasil Dicatat!</span>
+                                    <small style={{ color: '#15803d' }}>Kode: <strong>{pdfTicketData.code}</strong> | Total: <strong>Rp {pdfTicketData.total?.toLocaleString('id-ID')}</strong></small>
+                                </div>
+                                <span style={{ backgroundColor: '#dcfce7', color: '#15803d', padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 900 }}>LUNAS</span>
                             </div>
 
-                            {/* Format Selector Bar (Responsive 4-Column Grid) */}
-                            <div className="format-selector-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', backgroundColor: '#f1f5f9', padding: '4px', borderRadius: '12px', marginBottom: '16px', boxSizing: 'border-box', width: '100%' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setPrintFormat('full')}
-                                    style={{ border: 'none', padding: '8px 2px', borderRadius: '8px', fontSize: '0.68rem', fontWeight: 800, backgroundColor: printFormat === 'full' ? '#0c294a' : 'transparent', color: printFormat === 'full' ? 'white' : '#64748b', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', textAlign: 'center' }}
-                                >
-                                    <i className="fa-solid fa-layer-group" style={{ fontSize: '0.8rem' }}></i>
-                                    <span>Struk Lengkap</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setPrintFormat('invoice')}
-                                    style={{ border: 'none', padding: '8px 2px', borderRadius: '8px', fontSize: '0.68rem', fontWeight: 800, backgroundColor: printFormat === 'invoice' ? '#0c294a' : 'transparent', color: printFormat === 'invoice' ? 'white' : '#64748b', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', textAlign: 'center' }}
-                                >
-                                    <i className="fa-solid fa-file-invoice-dollar" style={{ fontSize: '0.8rem' }}></i>
-                                    <span>Invoice</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setPrintFormat('ticket')}
-                                    style={{ border: 'none', padding: '8px 2px', borderRadius: '8px', fontSize: '0.68rem', fontWeight: 800, backgroundColor: printFormat === 'ticket' ? '#047857' : 'transparent', color: printFormat === 'ticket' ? 'white' : '#64748b', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', textAlign: 'center' }}
-                                >
-                                    <i className="fa-solid fa-ticket" style={{ fontSize: '0.8rem' }}></i>
-                                    <span>Tiket Masuk</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setPrintFormat('rental')}
-                                    style={{ border: 'none', padding: '8px 2px', borderRadius: '8px', fontSize: '0.68rem', fontWeight: 800, backgroundColor: printFormat === 'rental' ? '#b45309' : 'transparent', color: printFormat === 'rental' ? 'white' : '#64748b', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', textAlign: 'center' }}
-                                >
-                                    <i className="fa-solid fa-bookmark" style={{ fontSize: '0.8rem' }}></i>
-                                    <span>Kupon Sewa</span>
-                                </button>
-                            </div>
-                            {printFormat === 'card' && (
-                                <div id="pdf-printable-area" style={{ border: '3px solid #0c294a', borderRadius: '18px', padding: '20px', backgroundColor: '#f8fafc' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0c294a', paddingBottom: '12px', marginBottom: '16px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <img src="assets/logo.png" alt="Logo" style={{ height: '42px' }} />
-                                            <div>
-                                                <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0c294a', margin: 0 }}>WATERBOOM CIJOHO INDAH</h3>
-                                                <small style={{ color: '#1a73e8', fontWeight: 700 }}>E-TICKET RESMI PENGUNJUNG</small>
-                                            </div>
-                                        </div>
-                                        <span style={{ backgroundColor: '#d1fae5', color: '#047857', fontSize: '0.72rem', fontWeight: 900, padding: '4px 10px', borderRadius: '50px', border: '1px solid #6ee7b7' }}>
-                                            VALIDATED / LUNAS
-                                        </span>
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.85rem', marginBottom: '16px' }}>
-                                        <div>
-                                            <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>KODE BOOKING</span>
-                                            <strong style={{ fontSize: '1.1rem', color: '#1a73e8' }}>{pdfTicketData.code}</strong>
-                                        </div>
-                                        <div>
-                                            <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>TANGGAL KUNJUNGAN</span>
-                                            <strong>{pdfTicketData.date}</strong>
-                                        </div>
-                                        <div>
-                                            <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>NAMA PEMESAN</span>
-                                            <strong>{pdfTicketData.name || pdfTicketData.buyerName || 'Pengunjung'}</strong>
-                                        </div>
-                                        <div>
-                                            <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>NO. WHATSAPP</span>
-                                            <strong>{pdfTicketData.phone || pdfTicketData.buyerPhone || '-'}</strong>
-                                        </div>
-                                    </div>
-                                    <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '10px', marginBottom: '16px' }}>
-                                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', marginBottom: '6px' }}>RINCIAN ITEM & TOTAL:</span>
-                                        {pdfTicketData.qty > 0 && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                                                <span>{pdfTicketData.type} ({pdfTicketData.qty}x)</span>
-                                                <strong>Rp {(pdfTicketData.subtotal || (pdfTicketData.total - ((pdfTicketData.rentals?.ban || 0) * 5000 + (pdfTicketData.rentals?.sepeda || 0) * 15000 + (pdfTicketData.rentals?.gazebo || 0) * 25000)))?.toLocaleString('id-ID')}</strong>
-                                            </div>
-                                        )}
-                                        {pdfTicketData.rentals?.ban > 0 && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#475569', marginBottom: '2px' }}>
-                                                <span>• Sewa Ban Renang ({pdfTicketData.rentals.ban}x)</span>
-                                                <span>Rp {(pdfTicketData.rentals.ban * (pdfTicketData.rentalsPrice?.ban || 5000)).toLocaleString('id-ID')}</span>
-                                            </div>
-                                        )}
-                                        {pdfTicketData.rentals?.sepeda > 0 && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#475569', marginBottom: '2px' }}>
-                                                <span>• Sewa Sepeda Air ({pdfTicketData.rentals.sepeda}x)</span>
-                                                <span>Rp {(pdfTicketData.rentals.sepeda * (pdfTicketData.rentalsPrice?.sepeda || 15000)).toLocaleString('id-ID')}</span>
-                                            </div>
-                                        )}
-                                        {pdfTicketData.rentals?.gazebo > 0 && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#475569', marginBottom: '2px' }}>
-                                                <span>• Sewa Gazebo Santai ({pdfTicketData.rentals.gazebo}x)</span>
-                                                <span>Rp {(pdfTicketData.rentals.gazebo * (pdfTicketData.rentalsPrice?.gazebo || 25000)).toLocaleString('id-ID')}</span>
-                                            </div>
-                                        )}
-                                        <div style={{ borderTop: '1px solid #cbd5e1', paddingTop: '6px', marginTop: '6px', display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: 900, color: '#0c294a' }}>
-                                            <span>TOTAL BAYAR</span>
-                                            <span>Rp {pdfTicketData.total?.toLocaleString('id-ID')}</span>
-                                        </div>
-                                    </div>
-                                    <div style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-                                        <div style={{ fontSize: '4.5rem', color: '#0c294a', lineHeight: 1 }}>
-                                            <i className="fa-solid fa-qrcode"></i>
-                                        </div>
-                                        <div style={{ letterSpacing: '3px', fontWeight: 900, color: '#475569', fontSize: '0.9rem', marginTop: '6px' }}>
-                                            {pdfTicketData.code}
-                                        </div>
-                                        <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Tunjukkan barcode/QR code ini ke loket pintu masuk</small>
-                                    </div>
-                                </div>
-                            )}
-
-                            {printFormat !== 'card' && (
-                                <div id="printable-full-package" className="thermal-receipt-80mm" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    {/* 1. STRUK INVOICE PEMBAYARAN */}
-                                    {(printFormat === 'full' || printFormat === 'invoice') && (
-                                        <div id="printable-invoice-only" className="thermal-receipt-80mm" style={{ border: '3px solid #000', borderRadius: '16px', padding: '18px', backgroundColor: '#ffffff', fontFamily: "'Courier New', Courier, monospace", color: '#000', fontSize: '0.82rem', lineHeight: '1.4' }}>
-                                            {/* HEADER BRAND & LOGO */}
-                                            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                                                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, margin: 0, letterSpacing: '-0.5px' }}>Cijoho Indah Waterboom</h2>
-                                                <small style={{ fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', display: 'block' }}>SERUNYA LIBURAN KELUARGA!</small>
-                                            </div>
-
-                                            <div style={{ borderTop: '2px solid #000', borderBottom: '2px solid #000', padding: '6px 0', margin: '8px 0', textAlign: 'center' }}>
-                                                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900 }}>💦 STRUK TIKET 💦</h3>
-                                                <div style={{ fontSize: '0.78rem', fontWeight: 700, marginTop: '2px' }}>Cijoho Indah Waterboom</div>
-                                                <div style={{ fontSize: '0.72rem', color: '#333' }}>Jl. Raya Cijoho No. 88, Cijoho - Tasikmalaya 46134</div>
-                                                <div style={{ fontSize: '0.72rem', color: '#333' }}>Telp. 0265-1234567</div>
-                                            </div>
-
-                                            {/* METADATA INFO */}
-                                            <div style={{ margin: '10px 0', fontSize: '0.8rem' }}>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '100px 10px 1fr' }}>
-                                                    <span>No. Transaksi</span><span>:</span><strong>{pdfTicketData.code}</strong>
-                                                </div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '100px 10px 1fr' }}>
-                                                    <span>Tanggal</span><span>:</span><span>{pdfTicketData.date}</span>
-                                                </div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '100px 10px 1fr' }}>
-                                                    <span>Waktu</span><span>:</span><span>{pdfTicketData.time || '10:15:32'}</span>
-                                                </div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '100px 10px 1fr' }}>
-                                                    <span>Kasir</span><span>:</span><span>{pdfTicketData.cashierName || 'KASIR01'}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* DETAIL PEMBELIAN TABLE */}
-                                            <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '8px 0', margin: '10px 0' }}>
-                                                <div style={{ fontWeight: 900, marginBottom: '6px', fontSize: '0.82rem' }}>DETAIL PEMBELIAN</div>
-                                                <table style={{ width: '100%', fontSize: '0.76rem', borderCollapse: 'collapse' }}>
-                                                    <thead>
-                                                        <tr style={{ borderBottom: '1px solid #000', textAlign: 'left' }}>
-                                                            <th style={{ paddingBottom: '4px', width: '25px' }}>No.</th>
-                                                            <th style={{ paddingBottom: '4px' }}>Jenis Tiket / Service</th>
-                                                            <th style={{ paddingBottom: '4px', textAlign: 'center', width: '35px' }}>Qty</th>
-                                                            <th style={{ paddingBottom: '4px', textAlign: 'right' }}>Harga Satuan</th>
-                                                            <th style={{ paddingBottom: '4px', textAlign: 'right' }}>Total</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {pdfTicketData.qty > 0 && (
-                                                            <tr>
-                                                                <td style={{ paddingTop: '6px', verticalAlign: 'top' }}>1.</td>
-                                                                <td style={{ paddingTop: '6px', verticalAlign: 'top' }}>{pdfTicketData.type}</td>
-                                                                <td style={{ paddingTop: '6px', textAlign: 'center', verticalAlign: 'top' }}>{pdfTicketData.qty}</td>
-                                                                <td style={{ paddingTop: '6px', textAlign: 'right', verticalAlign: 'top' }}>Rp {((pdfTicketData.subtotal || pdfTicketData.total) / pdfTicketData.qty).toLocaleString('id-ID')}</td>
-                                                                <td style={{ paddingTop: '6px', textAlign: 'right', verticalAlign: 'top', fontWeight: 800 }}>Rp {pdfTicketData.subtotal?.toLocaleString('id-ID')}</td>
-                                                            </tr>
-                                                        )}
-                                                        {pdfTicketData.rentals?.ban > 0 && (
-                                                            <tr>
-                                                                <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>{pdfTicketData.qty > 0 ? 2 : 1}.</td>
-                                                                <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>Sewa Ban Renang</td>
-                                                                <td style={{ paddingTop: '4px', textAlign: 'center', verticalAlign: 'top' }}>{pdfTicketData.rentals.ban}</td>
-                                                                <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top' }}>Rp {(pdfTicketData.rentalsPrice?.ban || 5000).toLocaleString('id-ID')}</td>
-                                                                <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top', fontWeight: 800 }}>Rp {(pdfTicketData.rentals.ban * (pdfTicketData.rentalsPrice?.ban || 5000)).toLocaleString('id-ID')}</td>
-                                                            </tr>
-                                                        )}
-                                                        {pdfTicketData.rentals?.sepeda > 0 && (
-                                                            <tr>
-                                                                <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>{(pdfTicketData.qty > 0 ? 1 : 0) + (pdfTicketData.rentals?.ban > 0 ? 1 : 0) + 1}.</td>
-                                                                <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>Sewa Sepeda Air</td>
-                                                                <td style={{ paddingTop: '4px', textAlign: 'center', verticalAlign: 'top' }}>{pdfTicketData.rentals.sepeda}</td>
-                                                                <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top' }}>Rp {(pdfTicketData.rentalsPrice?.sepeda || 15000).toLocaleString('id-ID')}</td>
-                                                                <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top', fontWeight: 800 }}>Rp {(pdfTicketData.rentals.sepeda * (pdfTicketData.rentalsPrice?.sepeda || 15000)).toLocaleString('id-ID')}</td>
-                                                            </tr>
-                                                        )}
-                                                        {pdfTicketData.rentals?.gazebo > 0 && (
-                                                            <tr>
-                                                                <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>{(pdfTicketData.qty > 0 ? 1 : 0) + (pdfTicketData.rentals?.ban > 0 ? 1 : 0) + (pdfTicketData.rentals?.sepeda > 0 ? 1 : 0) + 1}.</td>
-                                                                <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>Sewa Gazebo Santai</td>
-                                                                <td style={{ paddingTop: '4px', textAlign: 'center', verticalAlign: 'top' }}>{pdfTicketData.rentals.gazebo}</td>
-                                                                <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top' }}>Rp {(pdfTicketData.rentalsPrice?.gazebo || 25000).toLocaleString('id-ID')}</td>
-                                                                <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top', fontWeight: 800 }}>Rp {(pdfTicketData.rentals.gazebo * (pdfTicketData.rentalsPrice?.gazebo || 25000)).toLocaleString('id-ID')}</td>
-                                                            </tr>
-                                                        )}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-
-                                            {/* TOTALS */}
-                                            <div style={{ borderBottom: '1px dashed #000', paddingBottom: '8px', marginBottom: '10px' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                                                    <span>Subtotal</span>
-                                                    <span>: Rp {pdfTicketData.total?.toLocaleString('id-ID')}</span>
-                                                </div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                                                    <span>Biaya Layanan</span>
-                                                    <span>: Rp 0</span>
-                                                </div>
-                                                <div style={{ borderTop: '1px solid #000', paddingTop: '4px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '0.92rem' }}>
-                                                    <span>TOTAL BAYAR</span>
-                                                    <span>: Rp {pdfTicketData.total?.toLocaleString('id-ID')}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* FOOTER & KETENTUAN */}
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', fontSize: '0.7rem', alignItems: 'center', marginBottom: '10px' }}>
-                                                <div>
-                                                    <strong style={{ fontSize: '0.78rem', display: 'block', marginBottom: '2px' }}>👥 TERIMA KASIH</strong>
-                                                    <div>Selamat menikmati wahana Cijoho Indah Waterboom</div>
-                                                </div>
-                                                <div style={{ border: '1px solid #000', borderRadius: '6px', padding: '6px', fontSize: '0.64rem', lineHeight: '1.2' }}>
-                                                    <strong style={{ display: 'block', textAlign: 'center', borderBottom: '1px solid #000', paddingBottom: '2px', marginBottom: '4px' }}>KETENTUAN</strong>
-                                                    <ul style={{ margin: 0, paddingLeft: '12px' }}>
-                                                        <li>Tiket tidak dapat dikembalikan.</li>
-                                                        <li>Simpan struk di area kolam.</li>
-                                                        <li>Berlaku 1x masuk.</li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-
-                                            <div style={{ borderTop: '1px dashed #000', paddingTop: '6px', textAlign: 'center', fontSize: '0.72rem' }}>
-                                                <div style={{ marginBottom: '4px' }}>Follow us : <strong>@cijohoindahwaterboom</strong></div>
-                                                <strong style={{ fontSize: '0.76rem', textTransform: 'uppercase' }}>🌊 TERIMA KASIH ATAS KUNJUNGAN ANDA 🌊</strong>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {printFormat === 'full' && (
-                                        <div style={{ textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 900, color: '#000', textAlign: 'center', letterSpacing: '1px', padding: '8px 0', borderTop: '2px dashed #000', borderBottom: '2px dashed #000', margin: '10px 0', fontFamily: 'monospace' }}>
-                                            ✂ ---------------------- POTONG DI SINI ---------------------- ✂
-                                        </div>
-                                    )}
-
-                                    {/* 2. TIKET MASUK WAHANA (MONOCHROME BLACK & WHITE) */}
-                                    {printFormat === 'ticket' && (
-                                        <div id="printable-ticket-only" className="thermal-receipt-80mm" style={{ border: '1px solid #000', borderRadius: '0', padding: '24px 20px', backgroundColor: '#ffffff', fontFamily: "'Inter', Arial, sans-serif", color: '#000000', fontSize: '0.82rem', lineHeight: '1.4' }}>
-                                            {/* HEADER BRAND & LOGO */}
-                                            <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-                                                <img src="assets/logo.png" alt="Logo" style={{ height: '46px', objectFit: 'contain', marginBottom: '2px', filter: 'grayscale(100%) contrast(200%)' }} />
-                                                <h2 style={{ fontSize: '1.3rem', fontWeight: 900, margin: '2px 0 0 0', letterSpacing: '-0.5px', color: '#000' }}>Cijoho Indah Waterboom</h2>
-                                                <div style={{ display: 'inline-block', backgroundColor: '#000', color: '#fff', padding: '3px 12px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '3px' }}>SERUNYA LIBURAN KELUARGA!</div>
-                                            </div>
-
-                                            <div style={{ borderTop: '1px dashed #000', margin: '10px 0' }}></div>
-
-                                            <div style={{ textAlign: 'center', margin: '10px 0' }}>
-                                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.5px' }}>✦ TIKET MASUK ✦</h3>
-                                                <div style={{ fontSize: '0.85rem', fontWeight: 800, marginTop: '4px' }}>Cijoho Indah Waterboom</div>
-                                                <div style={{ fontSize: '0.74rem', color: '#000' }}>Jl. Raya Cijoho No. 88</div>
-                                                <div style={{ fontSize: '0.74rem', color: '#000' }}>Cijoho - Tasikmalaya 46134</div>
-                                                <div style={{ fontSize: '0.74rem', color: '#000' }}>Telp. 0265-1234567</div>
-                                            </div>
-
-                                            <div style={{ borderTop: '1px dashed #000', margin: '10px 0' }}></div>
-
-                                            {/* METADATA INFO */}
-                                            <div style={{ fontSize: '0.82rem', lineHeight: '1.65', margin: '10px 0' }}>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '115px 12px 1fr' }}>
-                                                    <span>No. Transaksi</span><span>:</span><strong>{pdfTicketData.code}</strong>
-                                                </div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '115px 12px 1fr' }}>
-                                                    <span>Tanggal</span><span>:</span><span>{pdfTicketData.date}</span>
-                                                </div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '115px 12px 1fr' }}>
-                                                    <span>Waktu</span><span>:</span><span>{pdfTicketData.time || '10:15:32'}</span>
-                                                </div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '115px 12px 1fr' }}>
-                                                    <span>Petugas Tiket</span><span>:</span><span>{pdfTicketData.cashierName || 'DEDI SAPUTRA'}</span>
-                                                </div>
-                                            </div>
-
-                                            <div style={{ borderTop: '1px dashed #000', margin: '10px 0' }}></div>
-
-                                            {pdfTicketData.qty > 0 ? (
-                                                <>
-                                                    {/* NOTICE BADGE */}
-                                                    <div style={{ textAlign: 'center', margin: '10px 0' }}>
-                                                        <div style={{ fontWeight: 900, fontSize: '0.88rem' }}>✦ TIKET BERLAKU UNTUK {pdfTicketData.qty > 1 ? `${pdfTicketData.qty} ORANG` : 'SATU ORANG'} ✦</div>
-                                                        <div style={{ fontWeight: 900, fontSize: '0.95rem', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '2px' }}>SEKALI PAKAI</div>
-                                                    </div>
-
-                                                    <div style={{ borderTop: '1px dashed #000', margin: '10px 0' }}></div>
-
-                                                    {/* FOOTER & BARCODE */}
-                                                    <div style={{ textAlign: 'center', paddingTop: '4px' }}>
-                                                        <div style={{ fontWeight: 900, fontSize: '0.95rem', marginBottom: '2px' }}>✦ TERIMA KASIH ✦</div>
-                                                        <div style={{ fontSize: '0.78rem', color: '#000' }}>Selamat menikmati wahana</div>
-                                                        <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#000' }}>Cijoho Indah Waterboom</div>
-                                                        <div style={{ fontSize: '1.2rem', lineHeight: '0.8', margin: '6px 0', letterSpacing: '2px' }}>~~~~~~~~~~~~~~~</div>
-                                                        
-                                                        {/* BARCODE VECTOR SVG */}
-                                                        <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0 4px 0' }}>
-                                                            <svg width="220" height="50" viewBox="0 0 220 50">
-                                                                <rect x="5" y="0" width="3" height="45" fill="#000"/>
-                                                                <rect x="10" y="0" width="1" height="45" fill="#000"/>
-                                                                <rect x="13" y="0" width="4" height="45" fill="#000"/>
-                                                                <rect x="19" y="0" width="2" height="45" fill="#000"/>
-                                                                <rect x="23" y="0" width="1" height="45" fill="#000"/>
-                                                                <rect x="26" y="0" width="5" height="45" fill="#000"/>
-                                                                <rect x="33" y="0" width="2" height="45" fill="#000"/>
-                                                                <rect x="37" y="0" width="3" height="45" fill="#000"/>
-                                                                <rect x="42" y="0" width="1" height="45" fill="#000"/>
-                                                                <rect x="45" y="0" width="4" height="45" fill="#000"/>
-                                                                <rect x="51" y="0" width="2" height="45" fill="#000"/>
-                                                                <rect x="55" y="0" width="3" height="45" fill="#000"/>
-                                                                <rect x="60" y="0" width="1" height="45" fill="#000"/>
-                                                                <rect x="63" y="0" width="5" height="45" fill="#000"/>
-                                                                <rect x="70" y="0" width="2" height="45" fill="#000"/>
-                                                                <rect x="74" y="0" width="4" height="45" fill="#000"/>
-                                                                <rect x="80" y="0" width="1" height="45" fill="#000"/>
-                                                                <rect x="83" y="0" width="3" height="45" fill="#000"/>
-                                                                <rect x="88" y="0" width="2" height="45" fill="#000"/>
-                                                                <rect x="92" y="0" width="5" height="45" fill="#000"/>
-                                                                <rect x="99" y="0" width="1" height="45" fill="#000"/>
-                                                                <rect x="102" y="0" width="3" height="45" fill="#000"/>
-                                                                <rect x="107" y="0" width="4" height="45" fill="#000"/>
-                                                                <rect x="113" y="0" width="2" height="45" fill="#000"/>
-                                                                <rect x="117" y="0" width="1" height="45" fill="#000"/>
-                                                                <rect x="120" y="0" width="5" height="45" fill="#000"/>
-                                                                <rect x="127" y="0" width="3" height="45" fill="#000"/>
-                                                                <rect x="132" y="0" width="2" height="45" fill="#000"/>
-                                                                <rect x="136" y="0" width="4" height="45" fill="#000"/>
-                                                                <rect x="142" y="0" width="1" height="45" fill="#000"/>
-                                                                <rect x="145" y="0" width="3" height="45" fill="#000"/>
-                                                                <rect x="150" y="0" width="5" height="45" fill="#000"/>
-                                                                <rect x="157" y="0" width="2" height="45" fill="#000"/>
-                                                                <rect x="161" y="0" width="4" height="45" fill="#000"/>
-                                                                <rect x="167" y="0" width="1" height="45" fill="#000"/>
-                                                                <rect x="170" y="0" width="3" height="45" fill="#000"/>
-                                                                <rect x="175" y="0" width="5" height="45" fill="#000"/>
-                                                                <rect x="182" y="0" width="2" height="45" fill="#000"/>
-                                                                <rect x="186" y="0" width="4" height="45" fill="#000"/>
-                                                                <rect x="192" y="0" width="1" height="45" fill="#000"/>
-                                                                <rect x="195" y="0" width="3" height="45" fill="#000"/>
-                                                                <rect x="200" y="0" width="5" height="45" fill="#000"/>
-                                                                <rect x="207" y="0" width="2" height="45" fill="#000"/>
-                                                                <rect x="211" y="0" width="4" height="45" fill="#000"/>
-                                                            </svg>
-                                                        </div>
-                                                        <div style={{ fontSize: '0.9rem', fontWeight: 900, letterSpacing: '2px', color: '#000' }}>{pdfTicketData.code}</div>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div style={{ textAlign: 'center', padding: '12px 0', fontWeight: 800, fontSize: '0.82rem' }}>
-                                                    <i>(Transaksi Ini Tidak Mencakup Tiket Masuk Wahana)</i>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* 3. KUPON PENUKARAN SEWA ADD-ON (EXACT MATCH SAMPLE THERMAL IMAGE) */}
-                                    {printFormat === 'rental' && (() => {
-                                        const rentalSources = pdfTicketData.rentals || pdfTicketData.details?.rentals || {};
-                                        const banQty = rentalSources.ban || 0;
-                                        const sepedaQty = rentalSources.sepeda || 0;
-                                        const gazeboQty = rentalSources.gazebo || 0;
-
-                                        const coupons = [];
-                                        if (banQty > 0) {
-                                            coupons.push({
-                                                id: `BAN`,
-                                                title: 'KUPON SEWA BAN RENANG',
-                                                itemName: 'Sewa Ban Renang',
-                                                qty: banQty,
-                                                code: `${pdfTicketData.code}-BAN`,
-                                                stand: 'STAND BAN RENANG'
-                                            });
-                                        }
-                                        if (sepedaQty > 0) {
-                                            coupons.push({
-                                                id: `SPD`,
-                                                title: 'KUPON SEWA SEPEDA AIR',
-                                                itemName: 'Sewa Sepeda Air',
-                                                qty: sepedaQty,
-                                                code: `${pdfTicketData.code}-SPD`,
-                                                stand: 'STAND SEPEDA AIR'
-                                            });
-                                        }
-                                        if (gazeboQty > 0) {
-                                            coupons.push({
-                                                id: `GZB`,
-                                                title: 'KUPON SEWA GAZEBO SANTAI',
-                                                itemName: 'Sewa Gazebo Santai',
-                                                qty: gazeboQty,
-                                                code: `${pdfTicketData.code}-GZB`,
-                                                stand: 'STAND GAZEBO SANTAI'
-                                            });
-                                        }
-
-                                        return (
-                                            <div id="printable-addon-only" className="thermal-receipt-80mm" style={{ display: 'block' }}>
-                                                 {coupons.length > 0 ? (
-                                                     coupons.map((coupon) => (
-                                                         <div key={coupon.id} className="thermal-coupon-page" style={{ border: '1px solid #000', borderRadius: '0', padding: '24px 20px', backgroundColor: '#ffffff', fontFamily: "'Inter', Arial, sans-serif", color: '#000000', fontSize: '0.82rem', lineHeight: '1.4' }}>
-                                                             {/* HEADER BRAND & LOGO */}
-                                                             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-                                                                 <img src="assets/logo.png" alt="Logo" style={{ height: '46px', objectFit: 'contain', marginBottom: '2px', filter: 'grayscale(100%) contrast(200%)' }} />
-                                                                 <h2 style={{ fontSize: '1.3rem', fontWeight: 900, margin: '2px 0 0 0', letterSpacing: '-0.5px', color: '#000' }}>Cijoho Indah Waterboom</h2>
-                                                                 <div style={{ display: 'inline-block', backgroundColor: '#000', color: '#fff', padding: '3px 12px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '3px' }}>SERUNYA LIBURAN KELUARGA!</div>
-                                                             </div>
-
-                                                             <div style={{ borderTop: '1px dashed #000', margin: '10px 0' }}></div>
-
-                                                             <div style={{ textAlign: 'center', margin: '10px 0' }}>
-                                                                 <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.5px' }}>✦ {coupon.title} ✦</h3>
-                                                                 <div style={{ fontSize: '0.85rem', fontWeight: 800, marginTop: '4px' }}>Cijoho Indah Waterboom</div>
-                                                                 <div style={{ fontSize: '0.74rem', color: '#000' }}>Jl. Raya Cijoho No. 88</div>
-                                                                 <div style={{ fontSize: '0.74rem', color: '#000' }}>Cijoho - Tasikmalaya 46134</div>
-                                                                 <div style={{ fontSize: '0.74rem', color: '#000' }}>Telp. 0265-1234567</div>
-                                                             </div>
-
-                                                             <div style={{ borderTop: '1px dashed #000', margin: '10px 0' }}></div>
-
-                                                             {/* METADATA INFO */}
-                                                             <div style={{ fontSize: '0.82rem', lineHeight: '1.65', margin: '10px 0' }}>
-                                                                 <div style={{ display: 'grid', gridTemplateColumns: '115px 12px 1fr' }}>
-                                                                     <span>No. Transaksi</span><span>:</span><strong>{pdfTicketData.code}</strong>
-                                                                 </div>
-                                                                 <div style={{ display: 'grid', gridTemplateColumns: '115px 12px 1fr' }}>
-                                                                     <span>Kode Kupon</span><span>:</span><strong>{coupon.code}</strong>
-                                                                 </div>
-                                                                 <div style={{ display: 'grid', gridTemplateColumns: '115px 12px 1fr' }}>
-                                                                     <span>Tanggal</span><span>:</span><span>{pdfTicketData.date}</span>
-                                                                 </div>
-                                                                 <div style={{ display: 'grid', gridTemplateColumns: '115px 12px 1fr' }}>
-                                                                     <span>Waktu</span><span>:</span><span>{pdfTicketData.time || '10:15:32'}</span>
-                                                                 </div>
-                                                                 <div style={{ display: 'grid', gridTemplateColumns: '115px 12px 1fr' }}>
-                                                                     <span>Petugas Stand</span><span>:</span><span>{pdfTicketData.cashierName || 'DEDI SAPUTRA'}</span>
-                                                                 </div>
-                                                             </div>
-
-                                                             <div style={{ borderTop: '1px dashed #000', margin: '10px 0' }}></div>
-
-                                                             {/* ITEM PENUKARAN PER UNIT */}
-                                                             <div style={{ textAlign: 'center', margin: '10px 0' }}>
-                                                                 <div style={{ fontWeight: 900, fontSize: '0.88rem' }}>✦ ITEM HAK SEWA: {coupon.qty}x {coupon.itemName.toUpperCase()} {coupon.qty > 1 ? `(TOTAL ${coupon.qty} UNIT)` : ''} ✦</div>
-                                                                 <div style={{ fontWeight: 900, fontSize: '0.95rem', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '2px' }}>SEKALI TUKAR (DISOBEK)</div>
-                                                             </div>
-
-                                                             <div style={{ borderTop: '1px dashed #000', margin: '10px 0' }}></div>
-
-                                                             {/* FOOTER & BARCODE */}
-                                                             <div style={{ textAlign: 'center', paddingTop: '4px' }}>
-                                                                 <div style={{ fontWeight: 900, fontSize: '0.95rem', marginBottom: '2px' }}>✦ TERIMA KASIH ✦</div>
-                                                                 <div style={{ fontSize: '0.78rem', color: '#000' }}>Selamat menikmati wahana</div>
-                                                                 <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#000' }}>Cijoho Indah Waterboom</div>
-                                                                 <div style={{ fontSize: '1.2rem', lineHeight: '0.8', margin: '6px 0', letterSpacing: '2px' }}>~~~~~~~~~~~~~~~</div>
-
-                                                                    {/* BARCODE VECTOR SVG */}
-                                                                    <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0 4px 0' }}>
-                                                                        <svg width="220" height="50" viewBox="0 0 220 50">
-                                                                            <rect x="5" y="0" width="3" height="45" fill="#000"/>
-                                                                            <rect x="10" y="0" width="1" height="45" fill="#000"/>
-                                                                            <rect x="13" y="0" width="4" height="45" fill="#000"/>
-                                                                            <rect x="19" y="0" width="2" height="45" fill="#000"/>
-                                                                            <rect x="23" y="0" width="1" height="45" fill="#000"/>
-                                                                            <rect x="26" y="0" width="5" height="45" fill="#000"/>
-                                                                            <rect x="33" y="0" width="2" height="45" fill="#000"/>
-                                                                            <rect x="37" y="0" width="3" height="45" fill="#000"/>
-                                                                            <rect x="42" y="0" width="1" height="45" fill="#000"/>
-                                                                            <rect x="45" y="0" width="4" height="45" fill="#000"/>
-                                                                            <rect x="51" y="0" width="2" height="45" fill="#000"/>
-                                                                            <rect x="55" y="0" width="3" height="45" fill="#000"/>
-                                                                            <rect x="60" y="0" width="1" height="45" fill="#000"/>
-                                                                            <rect x="63" y="0" width="5" height="45" fill="#000"/>
-                                                                            <rect x="70" y="0" width="2" height="45" fill="#000"/>
-                                                                            <rect x="74" y="0" width="4" height="45" fill="#000"/>
-                                                                            <rect x="80" y="0" width="1" height="45" fill="#000"/>
-                                                                            <rect x="83" y="0" width="3" height="45" fill="#000"/>
-                                                                            <rect x="88" y="0" width="2" height="45" fill="#000"/>
-                                                                            <rect x="92" y="0" width="5" height="45" fill="#000"/>
-                                                                            <rect x="99" y="0" width="1" height="45" fill="#000"/>
-                                                                            <rect x="102" y="0" width="3" height="45" fill="#000"/>
-                                                                            <rect x="107" y="0" width="4" height="45" fill="#000"/>
-                                                                            <rect x="113" y="0" width="2" height="45" fill="#000"/>
-                                                                            <rect x="117" y="0" width="1" height="45" fill="#000"/>
-                                                                            <rect x="120" y="0" width="5" height="45" fill="#000"/>
-                                                                            <rect x="127" y="0" width="3" height="45" fill="#000"/>
-                                                                            <rect x="132" y="0" width="2" height="45" fill="#000"/>
-                                                                            <rect x="136" y="0" width="4" height="45" fill="#000"/>
-                                                                            <rect x="142" y="0" width="1" height="45" fill="#000"/>
-                                                                            <rect x="145" y="0" width="3" height="45" fill="#000"/>
-                                                                            <rect x="150" y="0" width="5" height="45" fill="#000"/>
-                                                                            <rect x="157" y="0" width="2" height="45" fill="#000"/>
-                                                                            <rect x="161" y="0" width="4" height="45" fill="#000"/>
-                                                                            <rect x="167" y="0" width="1" height="45" fill="#000"/>
-                                                                            <rect x="170" y="0" width="3" height="45" fill="#000"/>
-                                                                            <rect x="175" y="0" width="5" height="45" fill="#000"/>
-                                                                            <rect x="182" y="0" width="2" height="45" fill="#000"/>
-                                                                            <rect x="186" y="0" width="4" height="45" fill="#000"/>
-                                                                            <rect x="192" y="0" width="1" height="45" fill="#000"/>
-                                                                            <rect x="195" y="0" width="3" height="45" fill="#000"/>
-                                                                            <rect x="200" y="0" width="5" height="45" fill="#000"/>
-                                                                            <rect x="207" y="0" width="2" height="45" fill="#000"/>
-                                                                            <rect x="211" y="0" width="4" height="45" fill="#000"/>
-                                                                        </svg>
-                                                                    </div>
-                                                                    <div style={{ fontSize: '0.9rem', fontWeight: 900, letterSpacing: '2px', color: '#000' }}>{coupon.code}</div>
-                                                                </div>
-                                                        </div>
-                                                        ))
-                                                ) : (
-                                                    <div style={{ border: '2px solid #000', borderRadius: '12px', padding: '16px', backgroundColor: '#ffffff', textAlign: 'center', fontWeight: 800, fontSize: '0.82rem', fontFamily: 'monospace' }}>
-                                                        <i>(Tidak Ada Item Sewa Add-on Pada Transaksi Ini)</i>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })()}
-                                </div>
-                            )}
-
-                            {/* OPSI CETAK STRUK INTERAKTIF */}
-                            <div style={{ backgroundColor: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '16px', padding: '14px', marginBottom: '16px' }}>
-                                <label style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0c294a', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-                                    <i className="fa-solid fa-print" style={{ color: '#2563eb' }}></i> PILIH FORMAT CETAK DOKUMEN:
+                            {/* OPSI CETAK 3 STRUK BERBEDA (LANGSUNG TAMPIL JELAS DI ATAS) */}
+                            <div className="modal-non-printable" style={{ backgroundColor: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '16px', padding: '14px', marginBottom: '16px' }}>
+                                <label style={{ fontSize: '0.84rem', fontWeight: 900, color: '#0c294a', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                                    <i className="fa-solid fa-print" style={{ color: '#2563eb' }}></i> PILIH CETAK 3 STRUK BERBEDA:
                                 </label>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '10px' }}>
                                     <button
                                         type="button"
-                                        onClick={() => triggerIsolatedPrint('full')}
-                                        style={{ backgroundColor: printFormat === 'full' ? '#0c294a' : 'white', color: printFormat === 'full' ? 'white' : '#0c294a', border: '1.5px solid #0c294a', padding: '11px 8px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}
+                                        onClick={() => triggerIsolatedPrint('ticket')}
+                                        disabled={!(pdfTicketData.ticketQty > 0 || pdfTicketData.qty > 0)}
+                                        style={{
+                                            backgroundColor: (pdfTicketData.ticketQty > 0 || pdfTicketData.qty > 0) ? '#047857' : '#94a3b8',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '12px 6px',
+                                            borderRadius: '12px',
+                                            fontSize: '0.76rem',
+                                            fontWeight: 900,
+                                            cursor: (pdfTicketData.ticketQty > 0 || pdfTicketData.qty > 0) ? 'pointer' : 'not-allowed',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '5px',
+                                            boxShadow: '0 2px 6px rgba(4,120,87,0.25)'
+                                        }}
                                     >
-                                        <i className="fa-solid fa-layer-group" style={{ color: '#2563eb' }}></i> Cetak Struk Lengkap
+                                        <i className="fa-solid fa-ticket" style={{ fontSize: '1.25rem' }}></i>
+                                        <span>1. Cetak Tiket</span>
+                                        <span style={{ fontSize: '0.62rem', fontWeight: 700, opacity: 0.9 }}>Tiket Masuk</span>
                                     </button>
 
                                     <button
                                         type="button"
                                         onClick={() => triggerIsolatedPrint('invoice')}
-                                        style={{ backgroundColor: printFormat === 'invoice' ? '#0c294a' : 'white', color: printFormat === 'invoice' ? 'white' : '#0c294a', border: '1.5px solid #0c294a', padding: '11px 8px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}
+                                        style={{
+                                            backgroundColor: '#0c294a',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '12px 6px',
+                                            borderRadius: '12px',
+                                            fontSize: '0.76rem',
+                                            fontWeight: 900,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '5px',
+                                            boxShadow: '0 2px 6px rgba(12,41,74,0.25)'
+                                        }}
                                     >
-                                        <i className="fa-solid fa-file-invoice-dollar" style={{ color: '#eab308' }}></i> Cetak Invoice
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => triggerIsolatedPrint('ticket')}
-                                        style={{ backgroundColor: printFormat === 'ticket' ? '#047857' : 'white', color: printFormat === 'ticket' ? 'white' : '#047857', border: '1.5px solid #047857', padding: '11px 8px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}
-                                    >
-                                        <i className="fa-solid fa-ticket" style={{ color: '#10b981' }}></i> Cetak Tiket Masuk
+                                        <i className="fa-solid fa-file-invoice-dollar" style={{ fontSize: '1.25rem', color: '#facc15' }}></i>
+                                        <span>2. Cetak Invoice</span>
+                                        <span style={{ fontSize: '0.62rem', fontWeight: 700, opacity: 0.9 }}>Bukti Bayar</span>
                                     </button>
 
                                     <button
                                         type="button"
                                         onClick={() => triggerIsolatedPrint('rental')}
-                                        style={{ backgroundColor: printFormat === 'rental' ? '#b45309' : 'white', color: printFormat === 'rental' ? 'white' : '#b45309', border: '1.5px solid #b45309', padding: '11px 8px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}
+                                        style={{
+                                            backgroundColor: '#b45309',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '12px 6px',
+                                            borderRadius: '12px',
+                                            fontSize: '0.76rem',
+                                            fontWeight: 900,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '5px',
+                                            boxShadow: '0 2px 6px rgba(180,83,9,0.25)'
+                                        }}
                                     >
-                                        <i className="fa-solid fa-bookmark" style={{ color: '#f59e0b' }}></i> Cetak Struk Add-On
+                                        <i className="fa-solid fa-life-ring" style={{ fontSize: '1.25rem', color: '#fed7aa' }}></i>
+                                        <span>3. Cetak Add-On</span>
+                                        <span style={{ fontSize: '0.62rem', fontWeight: 700, opacity: 0.9 }}>
+                                            {(pdfTicketData.rentals?.ban > 0 || pdfTicketData.rentals?.sepeda > 0 || pdfTicketData.rentals?.gazebo > 0) ? 'Kupon Sewa' : 'Kupon Fasilitas'}
+                                        </span>
                                     </button>
                                 </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => triggerIsolatedPrint('full')}
+                                    style={{ width: '100%', backgroundColor: 'white', color: '#0c294a', border: '1.5px dashed #0c294a', padding: '10px 8px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                >
+                                    <i className="fa-solid fa-layer-group" style={{ color: '#2563eb' }}></i> Cetak Semua Struk Sekaligus (Tiket, Invoice & Add-On)
+                                </button>
+                            </div>
+
+                            {/* Format Selector Bar for Live Preview */}
+                            <div className="modal-non-printable" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b' }}>PRATINJAU STRUK (80MM THERMAL POS):</span>
+                                <span style={{ backgroundColor: '#eff6ff', color: '#1e40af', padding: '2px 8px', borderRadius: '12px', fontSize: '0.68rem', fontWeight: 900 }}>80mm POS Roll</span>
+                            </div>
+
+                            <div className="format-selector-bar modal-non-printable" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', backgroundColor: '#f1f5f9', padding: '4px', borderRadius: '12px', marginBottom: '16px', boxSizing: 'border-box', width: '100%' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setPrintFormat('ticket')}
+                                    style={{ border: 'none', padding: '8px 2px', borderRadius: '8px', fontSize: '0.68rem', fontWeight: 900, backgroundColor: printFormat === 'ticket' ? '#047857' : 'transparent', color: printFormat === 'ticket' ? 'white' : '#475569', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', textAlign: 'center' }}
+                                >
+                                    <i className="fa-solid fa-ticket" style={{ fontSize: '0.85rem' }}></i>
+                                    <span>Tiket Masuk</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPrintFormat('invoice')}
+                                    style={{ border: 'none', padding: '8px 2px', borderRadius: '8px', fontSize: '0.68rem', fontWeight: 900, backgroundColor: printFormat === 'invoice' ? '#0c294a' : 'transparent', color: printFormat === 'invoice' ? 'white' : '#475569', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', textAlign: 'center' }}
+                                >
+                                    <i className="fa-solid fa-file-invoice-dollar" style={{ fontSize: '0.85rem' }}></i>
+                                    <span>Invoice</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPrintFormat('rental')}
+                                    style={{ border: 'none', padding: '8px 2px', borderRadius: '8px', fontSize: '0.68rem', fontWeight: 900, backgroundColor: printFormat === 'rental' ? '#b45309' : 'transparent', color: printFormat === 'rental' ? 'white' : '#475569', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', textAlign: 'center' }}
+                                >
+                                    <i className="fa-solid fa-life-ring" style={{ fontSize: '0.85rem' }}></i>
+                                    <span>Sewa Add-On</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPrintFormat('full')}
+                                    style={{ border: 'none', padding: '8px 2px', borderRadius: '8px', fontSize: '0.68rem', fontWeight: 900, backgroundColor: printFormat === 'full' ? '#2563eb' : 'transparent', color: printFormat === 'full' ? 'white' : '#475569', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', textAlign: 'center' }}
+                                >
+                                    <i className="fa-solid fa-layer-group" style={{ fontSize: '0.85rem' }}></i>
+                                    <span>Semua Struk</span>
+                                </button>
+                            </div>
+
+                            {/* PREVIEW AREA (SYNCHRONIZED POS 80MM) */}
+                            <div className="receipt-print-wrapper" style={{ width: '100%', boxSizing: 'border-box' }}>
+                                {printFormat === 'full' && (
+                                    <FullPackageReceipt data={pdfTicketData} />
+                                )}
+                                {printFormat === 'ticket' && (
+                                    <TicketReceipt data={pdfTicketData} standalone={true} forceShow={true} />
+                                )}
+                                {printFormat === 'invoice' && (
+                                    <InvoiceReceipt data={pdfTicketData} standalone={true} />
+                                )}
+                                {printFormat === 'rental' && (
+                                    <AddonReceipt data={pdfTicketData} standalone={true} forceShow={true} />
+                                )}
                             </div>
 
                             {/* Action Buttons */}
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                            <div className="modal-non-printable" style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
                                 <button
                                     type="button"
                                     onClick={() => triggerIsolatedPrint(printFormat)}
                                     style={{ flex: 1, backgroundColor: '#0c294a', color: 'white', border: 'none', padding: '13px', borderRadius: '12px', fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(12, 41, 74, 0.2)' }}
                                 >
-                                    <i className="fa-solid fa-print"></i> Cetak PDF ({printFormat.toUpperCase()})
+                                    <i className="fa-solid fa-print"></i> Cetak Pratinjau Terpilih ({printFormat.toUpperCase()})
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setShowPDFTicketModal(false)}
+                                    onClick={() => {
+                                        setShowPDFTicketModal(false);
+                                        setTicketQty(0);
+                                        setSewaBan(0);
+                                        setSewaSepeda(0);
+                                        setSewaGazebo(0);
+                                    }}
                                     style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', padding: '13px 18px', borderRadius: '12px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}
                                 >
-                                    Selesai
+                                    Selesai / Transaksi Baru
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* DIRECT BODY PRINT PORTAL: BEBAS CLIPPING MODAL */}
+            {pdfTicketData && (
+                <DirectPrintPortal data={pdfTicketData} format={printFormat} />
             )}
 
             {/* MODAL CETAK LAPORAN REKAPITULASI SHIFT KASIR (MAJOO/MOJO POS STYLE) */}

@@ -39,8 +39,24 @@ export default function Testimonial() {
     const currentSlide = TESTIMONIALS[currentIndex];
 
     return (
-        <section id="testimonial" className="testimonial-section">
-            <div className="container">
+        <section id="testimonial" className="testimonial-section" style={{ paddingTop: '50px', paddingBottom: '55px', position: 'relative', overflow: 'hidden' }}>
+            <div className="container" style={{ position: 'relative', zIndex: 2 }}>
+                {/* Section Header */}
+                <div className="section-header-center" style={{ marginBottom: '36px', textAlign: 'center' }}>
+                    <h5 className="section-badge-green" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <span className="badge-line" style={{ opacity: 0.6 }}>—— •</span>
+                        <i className="fa-solid fa-comments" style={{ color: 'var(--color-accent, #7cc04b)', fontSize: '0.9rem' }}></i>
+                        <span>ULASAN & TESTIMONIAL</span>
+                        <span className="badge-line" style={{ opacity: 0.6 }}>• ——</span>
+                    </h5>
+                    
+                    <h2 className="section-title-center" style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-primary, #0c294a)', margin: '4px 0 12px 0', textTransform: 'uppercase', letterSpacing: '-0.5px' }}>
+                        PENGALAMAN SERU PENGUNJUNG KAMI
+                    </h2>
+                    
+                    <WaveDivider type="accent" />
+                </div>
+
                 <div className="testimonial-card" style={{ position: 'relative', overflow: 'hidden' }}>
                     {/* Reusable Splash Wave Background Overlay */}
                     <WaveDivider type="splash" />

@@ -35,7 +35,8 @@ export default function Header({ onOpenBooking }) {
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 20);
         };
-        window.addEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll(); // Trigger check on initial load
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
@@ -180,6 +181,8 @@ export default function Header({ onOpenBooking }) {
                     </div>
                 </div>
             </header>
+            {/* Standby Fixed Header Document Spacer */}
+            <div className="navbar-fixed-spacer" aria-hidden="true" />
 
             {/* MODAL NOTIFIKASI PUBLIC WEBSITE */}
             {showNotif && (
@@ -366,8 +369,10 @@ export default function Header({ onOpenBooking }) {
                             setIsMobileNavOpen(false);
                             navigate('/login?role=staf');
                         }}
+                        title="Portal Login Admin & Kasir"
+                        aria-label="Portal Login Admin & Kasir"
                     >
-                        <i className="fa-solid fa-lock"></i> Portal Akses Staf / Admin
+                        <i className="fa-solid fa-arrow-right-to-bracket"></i>
                     </button>
                 </div>
             </aside>

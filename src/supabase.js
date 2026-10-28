@@ -58,7 +58,7 @@ export const keepAlive = async () => {
       const { count, error } = await supabase
         .from('transactions')
         .select('id', { count: 'exact', head: true });
-      
+
       if (error) {
         console.warn('Keep-alive warning:', error.message);
       } else {
@@ -68,4 +68,4 @@ export const keepAlive = async () => {
   } catch (e) {
     console.warn('Keep-alive failed:', e.message);
   }
-};
+};

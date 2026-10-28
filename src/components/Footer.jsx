@@ -97,11 +97,21 @@ export default function Footer({ onOpenBooking }) {
             <div className="footer-bottom">
                 <div className="container footer-bottom-container">
                     <div className="footer-location">
-                        <i className="fa-solid fa-location-dot" style={{ color: '#facc15', fontSize: '1rem', flexShrink: 0 }}></i>
-                        <span>Jalan Cijoho, Desa Arjasari, Kecamatan Leuwisari, Kabupaten Tasikmalaya, Jawa Barat</span>
+                        <i className="fa-solid fa-location-dot footer-location-pin" style={{ color: '#facc15', flexShrink: 0 }}></i>
+                        <span className="footer-location-text">Jalan Cijoho, Desa Arjasari, Kecamatan Leuwisari, Kabupaten Tasikmalaya, Jawa Barat</span>
                     </div>
-                    <div className="footer-copy">
-                        &copy; 2026 Waterboom Cijoho Indah. All rights reserved.
+                    <div className="footer-bottom-right">
+                        <span className="footer-copy">
+                            &copy; 2026 Waterboom Cijoho Indah. All rights reserved.
+                        </span>
+                        <Link 
+                            to="/login" 
+                            className="footer-admin-door-btn" 
+                            title="Portal Login Admin & Kasir" 
+                            aria-label="Login Admin & Kasir"
+                        >
+                            <i className="fa-solid fa-arrow-right-to-bracket"></i>
+                        </Link>
                     </div>
                 </div>
             </div>
