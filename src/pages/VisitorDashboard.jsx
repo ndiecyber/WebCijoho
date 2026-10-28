@@ -163,7 +163,12 @@ export default function VisitorDashboard() {
                 });
             }
             if (supabaseItems.length > 0) {
-                const { error } = await supabase.from('transactions').insert(supabaseItems);
+                let { error } = await supabase.from('transactions').insert(supabaseItems);
+                if (error && error.message && error.message.includes('transaction_type')) {
+                    const fallbackItems = supabaseItems.map(({ transaction_type, ...rest }) => rest);
+                    const retry = await supabase.from('transactions').insert(fallbackItems);
+                    error = retry.error;
+                }
                 if (error) {
                     console.error('Simpan Supabase gagal (desktop online):', error.message);
                 }

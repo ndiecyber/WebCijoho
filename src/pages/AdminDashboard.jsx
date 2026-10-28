@@ -857,6 +857,8 @@ export default function AdminDashboard() {
         return matchesSearch;
     });
 
+    const filteredExpenditures = dateFilteredExpenditures;
+
     return (
         <div className="superadmin-dashboard-container">
             {/* Mobile Sidebar Backdrop Overlay */}
@@ -2039,22 +2041,32 @@ export default function AdminDashboard() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {filteredExpenditures.map((item, idx) => (
-                                                <tr key={idx}>
-                                                    <td>{item.date}</td>
-                                                    <td><span className="category-badge-simple">{item.category}</span></td>
-                                                    <td>{item.desc}</td>
-                                                    <td className="font-bold text-red">Rp {item.amount.toLocaleString('id-ID')}</td>
-                                                    <td>
-                                                        <button
-                                                            className="btn-refund-action"
-                                                            onClick={() => handleDeleteExpense(item.id)}
-                                                        >
-                                                            <i className="fa-solid fa-trash-can"></i>
-                                                        </button>
+                                            {filteredExpenditures.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
+                                                        <i className="fa-solid fa-receipt" style={{ fontSize: '24px', marginBottom: '8px', display: 'block', opacity: 0.5 }}></i>
+                                                        Belum ada catatan pengeluaran
                                                     </td>
                                                 </tr>
-                                            ))}
+                                            ) : (
+                                                filteredExpenditures.map((item, idx) => (
+                                                    <tr key={item.id || idx}>
+                                                        <td>{item.date}</td>
+                                                        <td><span className="category-badge-simple">{item.category}</span></td>
+                                                        <td>{item.desc}</td>
+                                                        <td className="font-bold text-red">Rp {Number(item.amount || 0).toLocaleString('id-ID')}</td>
+                                                        <td>
+                                                            <button
+                                                                className="btn-refund-action"
+                                                                onClick={() => handleDeleteExpense(item.id)}
+                                                                title="Hapus Pengeluaran"
+                                                            >
+                                                                <i className="fa-solid fa-trash-can"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
